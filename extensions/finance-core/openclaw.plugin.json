@@ -1,0 +1,38 @@
+{
+  "id": "finance-core",
+  "name": "Finance Core",
+  "description": "Canonical financial data layer — normalized models, storage, policy checks, anomaly detection, and briefing generation for the personal finance skill ecosystem",
+  "version": "1.0.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "storageDir": {
+        "type": "string",
+        "description": "Directory for local financial data storage (default: ~/.openclaw/finance-data)"
+      },
+      "defaultUserId": {
+        "type": "string",
+        "description": "Default user ID when not explicitly provided"
+      },
+      "anomalyThresholds": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "largeTransactionMultiple": {
+            "type": "number",
+            "description": "Flag transactions exceeding this multiple of average (default: 3)"
+          },
+          "balanceDropPercent": {
+            "type": "number",
+            "description": "Flag balance drops exceeding this percentage (default: 20)"
+          }
+        }
+      },
+      "policyRulesPath": {
+        "type": "string",
+        "description": "Path to user policy rules JSON file"
+      }
+    }
+  }
+}

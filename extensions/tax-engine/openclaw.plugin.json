@@ -1,0 +1,25 @@
+{
+  "id": "tax-engine",
+  "name": "Tax Engine",
+  "description": "Tax document parsing, liability estimation, tax-loss harvesting, wash sale detection, lot selection, and quarterly estimated payment calculation.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "defaultFilingStatus": {
+        "type": "string",
+        "enum": ["single", "married_filing_jointly", "married_filing_separately", "head_of_household"],
+        "description": "Default federal filing status for tax calculations"
+      },
+      "defaultState": {
+        "type": "string",
+        "description": "Two-letter state code for state tax calculations (e.g. CA, NY)"
+      },
+      "defaultTaxYear": {
+        "type": "number",
+        "description": "Default tax year when not specified in tool calls"
+      }
+    }
+  }
+}

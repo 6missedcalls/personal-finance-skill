@@ -1,0 +1,23 @@
+{
+  "name": "@personal-finance/plaid-connect",
+  "version": "0.1.0",
+  "description": "Plaid API integration for OpenClaw personal finance skill",
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "plaid": "^26.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.0.0"
+  }
+}

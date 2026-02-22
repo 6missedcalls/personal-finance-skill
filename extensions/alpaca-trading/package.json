@@ -1,0 +1,19 @@
+{
+  "name": "@personal-finance/alpaca-trading",
+  "version": "1.0.0",
+  "description": "Alpaca brokerage integration for OpenClaw",
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

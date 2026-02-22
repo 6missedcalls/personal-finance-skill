@@ -1,0 +1,44 @@
+{
+  "id": "plaid-connect",
+  "name": "Plaid Connect",
+  "description": "Plaid API integration for banking, transactions, investments, and liabilities aggregation",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "plaidClientIdEnv": {
+        "type": "string",
+        "description": "Name of env var holding Plaid client ID",
+        "default": "PLAID_CLIENT_ID"
+      },
+      "plaidSecretEnv": {
+        "type": "string",
+        "description": "Name of env var holding Plaid secret key",
+        "default": "PLAID_SECRET"
+      },
+      "plaidEnv": {
+        "type": "string",
+        "description": "Plaid environment: sandbox, development, or production",
+        "enum": ["sandbox", "development", "production"],
+        "default": "sandbox"
+      },
+      "webhookUrl": {
+        "type": "string",
+        "description": "URL for Plaid webhook delivery"
+      },
+      "clientName": {
+        "type": "string",
+        "description": "Application name shown in Plaid Link",
+        "default": "OpenClaw Finance"
+      },
+      "countryCodes": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Supported country codes",
+        "default": ["US"]
+      }
+    },
+    "required": ["plaidClientIdEnv", "plaidSecretEnv", "plaidEnv"]
+  }
+}

@@ -1,21 +1,22 @@
 ---
-name: personal-finance-cfo
+name: personal-finance-skill
 description: >
-  Use when users want personal finance analysis or actions across banking,
-  investing, and tax workflows (Plaid/Alpaca/IBKR/tax docs), including
-  scheduled scans, anomaly detection, portfolio monitoring, tax optimization,
-  and approval-gated execution.
-version: 1.0.0
-extensions:
-  - finance-core
-  - plaid-connect
-  - alpaca-trading
-  - ibkr-portfolio
-  - tax-engine
-tools: 46
+  Personal finance management skill providing 46 tools across 5 extensions
+  for bank account aggregation (Plaid), brokerage trading (Alpaca), portfolio
+  monitoring (IBKR), tax optimization, and financial analysis. Supports
+  scheduled scans, anomaly detection, net worth tracking, tax-loss harvesting,
+  and approval-gated execution of financial actions.
+license: MIT
+metadata:
+  author: contributors
+  version: "1.0.0"
+  tools: "46"
+  extensions: "finance-core, plaid-connect, alpaca-trading, ibkr-portfolio, tax-engine"
 ---
 
-# Personal Finance CFO Skill
+# Personal Finance Skill
+
+A comprehensive personal finance management skill with 46 tools across 5 extensions for banking, investing, tax, and financial analysis workflows.
 
 ## When to Use
 
@@ -34,23 +35,18 @@ Activate this skill when a user asks for:
 
 ## Architecture Overview
 
-Five OpenClaw extensions organized in three layers:
+Five extensions organized in three layers:
 
 ```
-┌─────────────────────────────────────────────────┐
-│              Intelligence Layer                  │
-│  tax-engine (10 tools)                          │
-│  — parsing, liability, TLH, wash sales, lots    │
-├─────────────────────────────────────────────────┤
-│            Data Source Adapters                   │
-│  plaid-connect (8)  alpaca-trading (10)          │
-│  ibkr-portfolio (9)                              │
-├─────────────────────────────────────────────────┤
-│              Foundation Layer                     │
-│  finance-core (9 tools)                          │
-│  — canonical models, storage, normalization,     │
-│    policy checks, anomaly detection, briefs      │
-└─────────────────────────────────────────────────┘
+Intelligence Layer
+  tax-engine (10 tools) — parsing, liability, TLH, wash sales, lots
+
+Data Source Adapters
+  plaid-connect (8)   alpaca-trading (10)   ibkr-portfolio (9)
+
+Foundation Layer
+  finance-core (9 tools) — canonical models, storage, normalization,
+    policy checks, anomaly detection, briefs
 ```
 
 **Data flow**: Adapters fetch provider data → finance-core normalizes and stores → intelligence layer analyzes → policy engine gates actions.
@@ -71,6 +67,8 @@ Five OpenClaw extensions organized in three layers:
 | `finance_generate_brief` | Create structured financial summary with action items | READ |
 | `finance_policy_check` | Validate proposed action against policy rules | READ |
 
+> Full schemas: [references/ext-finance-core.md](references/ext-finance-core.md)
+
 ### plaid-connect — 8 tools
 
 | Tool | Description | Risk |
@@ -83,6 +81,8 @@ Five OpenClaw extensions organized in three layers:
 | `plaid_get_liabilities` | Fetch credit, student loan, and mortgage data | READ |
 | `plaid_get_recurring` | Identify recurring inflow/outflow streams | READ |
 | `plaid_webhook_handler` | Process incoming Plaid webhook events | LOW |
+
+> Full schemas: [references/ext-plaid-connect.md](references/ext-plaid-connect.md)
 
 ### alpaca-trading — 10 tools
 
@@ -99,6 +99,8 @@ Five OpenClaw extensions organized in three layers:
 | `alpaca_market_data` | Get snapshots, bars, or quotes for symbols | READ |
 | `alpaca_clock` | Check if market is open, next open/close | READ |
 
+> Full schemas: [references/ext-alpaca-trading.md](references/ext-alpaca-trading.md)
+
 ### ibkr-portfolio — 9 tools
 
 | Tool | Description | Risk |
@@ -112,6 +114,8 @@ Five OpenClaw extensions organized in three layers:
 | `ibkr_search_contracts` | Search contracts by symbol/name/type | READ |
 | `ibkr_market_snapshot` | Real-time market data for contracts | READ |
 | `ibkr_get_orders` | Get current live orders | READ |
+
+> Full schemas: [references/ext-ibkr-portfolio.md](references/ext-ibkr-portfolio.md)
 
 ### tax-engine — 10 tools
 
@@ -127,6 +131,8 @@ Five OpenClaw extensions organized in three layers:
 | `tax_check_wash_sales` | Validate wash sale rule compliance (61-day window) | READ |
 | `tax_lot_selection` | Compare FIFO/LIFO/specific ID for a proposed sale | READ |
 | `tax_quarterly_estimate` | Quarterly estimated payments with safe harbor | READ |
+
+> Full schemas: [references/ext-tax-engine.md](references/ext-tax-engine.md)
 
 ## Key Workflows
 
@@ -216,7 +222,7 @@ openclaw cron add \
   --cron "0 8 * * 1" \
   --tz "America/Los_Angeles" \
   --session isolated \
-  --message "Run personal-finance-cfo weekly workflow: sync all providers, compute net worth delta, top spend changes, upcoming bills, tax posture, and portfolio drift. Send concise brief with action queue."
+  --message "Run personal-finance-skill weekly workflow: sync all providers, compute net worth delta, top spend changes, upcoming bills, tax posture, and portfolio drift. Send concise brief with action queue."
 ```
 
 ### Daily Anomaly Scan
@@ -264,18 +270,20 @@ These rules apply to all AI agents using this skill:
 
 ## Reference Index
 
+Detailed documentation is available in the `references/` directory:
+
 | File | Contents |
 |------|----------|
-| `references/ext-finance-core.md` | 9 tools, storage layer, normalization functions |
-| `references/ext-plaid-connect.md` | 8 tools, Plaid Link flow, webhook handling |
-| `references/ext-alpaca-trading.md` | 10 tools, order lifecycle, safety limits |
-| `references/ext-ibkr-portfolio.md` | 9 tools, session management, market data fields |
-| `references/ext-tax-engine.md` | 10 tools, 5 parsers + 5 calculators, form field mappings |
-| `references/data-models-and-schemas.md` | Canonical types, enums, entity schemas |
-| `references/risk-and-policy-guardrails.md` | Policy engine, approval tiers, hard rules |
-| `references/api-plaid.md` | Full Plaid API reference (219 KB) |
-| `references/api-alpaca-trading.md` | Full Alpaca API reference (185 KB) |
-| `references/api-ibkr-client-portal.md` | IBKR Client Portal Web API reference |
-| `references/api-openclaw-framework.md` | OpenClaw architecture reference |
-| `references/api-openclaw-extension-patterns.md` | How to build OpenClaw extensions |
-| `references/api-irs-tax-forms.md` | IRS tax form schemas and rules |
+| [references/ext-finance-core.md](references/ext-finance-core.md) | 9 tools, storage layer, normalization functions |
+| [references/ext-plaid-connect.md](references/ext-plaid-connect.md) | 8 tools, Plaid Link flow, webhook handling |
+| [references/ext-alpaca-trading.md](references/ext-alpaca-trading.md) | 10 tools, order lifecycle, safety limits |
+| [references/ext-ibkr-portfolio.md](references/ext-ibkr-portfolio.md) | 9 tools, session management, market data fields |
+| [references/ext-tax-engine.md](references/ext-tax-engine.md) | 10 tools, 5 parsers + 5 calculators, form field mappings |
+| [references/data-models-and-schemas.md](references/data-models-and-schemas.md) | Canonical types, enums, entity schemas |
+| [references/risk-and-policy-guardrails.md](references/risk-and-policy-guardrails.md) | Policy engine, approval tiers, hard rules |
+| [references/api-plaid.md](references/api-plaid.md) | Full Plaid API reference |
+| [references/api-alpaca-trading.md](references/api-alpaca-trading.md) | Full Alpaca API reference |
+| [references/api-ibkr-client-portal.md](references/api-ibkr-client-portal.md) | IBKR Client Portal Web API reference |
+| [references/api-openclaw-framework.md](references/api-openclaw-framework.md) | OpenClaw architecture reference |
+| [references/api-openclaw-extension-patterns.md](references/api-openclaw-extension-patterns.md) | How to build OpenClaw extensions |
+| [references/api-irs-tax-forms.md](references/api-irs-tax-forms.md) | IRS tax form schemas and rules |

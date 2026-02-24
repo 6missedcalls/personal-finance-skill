@@ -26,8 +26,6 @@ personal-finance-skill/
     api-openclaw-framework.md # OpenClaw architecture
     api-openclaw-extension-patterns.md
     api-irs-tax-forms.md      # IRS tax form schemas + rules
-  assets/
-    README.md                 # Human-facing setup guide
   extensions/
     finance-core/             # Canonical models, storage, normalization, policy
     plaid-connect/            # Plaid API integration

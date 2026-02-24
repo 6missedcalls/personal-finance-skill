@@ -4,18 +4,18 @@
 
 ### Your AI-Powered Personal CFO
 
-**46 tools** across **5 extensions** for banking, investing, tax optimization, and financial analysis — built for the [Agent Skills Protocol](https://agentskills.io).
+**75 tools** across **7 extensions** for banking, investing, tax optimization, market intelligence, social sentiment, and financial analysis — built for the [Agent Skills Protocol](https://agentskills.io).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-Protocol-blueviolet)](https://agentskills.io)
-[![Tools](https://img.shields.io/badge/Tools-46-brightgreen)](#tool-catalog)
-[![Tests](https://img.shields.io/badge/Tests-324_passing-success)](#running-tests)
+[![Tools](https://img.shields.io/badge/Tools-75-brightgreen)](#tool-catalog)
+[![Tests](https://img.shields.io/badge/Tests-612_passing-success)](#running-tests)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?logo=typescript&logoColor=white)](#)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=nodedotjs&logoColor=white)](#)
 
 ---
 
-**Connect your bank accounts** &bull; **Monitor your portfolio** &bull; **Trade stocks** &bull; **Optimize taxes** &bull; **Detect anomalies**
+**Connect your bank accounts** &bull; **Monitor your portfolio** &bull; **Trade stocks** &bull; **Optimize taxes** &bull; **Track market intel** &bull; **Detect anomalies**
 
 All through natural language, with deterministic calculations, policy guardrails, and approval gates.
 
@@ -31,7 +31,7 @@ Most AI finance tools hallucinate numbers. This one doesn't.
 
 - **Deterministic math** — Tax liability, P/L, net worth always computed by tools, never by LLM arithmetic
 - **Policy engine** — Every trade, transfer, and tax move passes `finance_policy_check` before execution
-- **Multi-provider** — Plaid (banking) + Alpaca (trading) + IBKR (portfolio) + IRS tax forms in one unified model
+- **Multi-provider** — Plaid (banking) + Alpaca (trading) + IBKR (portfolio) + IRS tax forms + Finnhub/SEC/FRED/BLS (market data) + StockTwits/X (sentiment) in one unified model
 - **Approval gates** — No live trades without explicit human confirmation, ever
 - **Canonical data model** — All providers normalize into shared types (Account, Transaction, Position, Liability)
 - **Works with 40+ AI agents** — Claude Code, Cursor, Codex, OpenClaw, Windsurf, and more via the Agent Skills Protocol
@@ -57,8 +57,8 @@ npx skills add <owner>/personal-finance-skill -a claude-code -a cursor -a codex
 ```
 +---------------------------------------------------+
 |              Intelligence Layer                     |
-|  tax-engine (10 tools)                             |
-|  Parsing, liability, TLH, wash sales, lot select   |
+|  tax-engine (23)  market-intel (10)                |
+|  social-sentiment (6)                              |
 +---------------------------------------------------+
 |            Data Source Adapters                      |
 |  plaid-connect (8)  |  alpaca-trading (10)         |
@@ -81,7 +81,9 @@ npx skills add <owner>/personal-finance-skill -a claude-code -a cursor -a codex
 | **plaid-connect** | 8 | Plaid Link flow, bank accounts, transactions, investments, liabilities, recurring charges, webhooks |
 | **alpaca-trading** | 10 | Brokerage account, positions, orders, market data, trading with safety limits |
 | **ibkr-portfolio** | 9 | IBKR Client Portal, portfolio allocation, performance, market snapshots, session management |
-| **tax-engine** | 10 | W-2/1099-B/1099-DIV/1099-INT/K-1 parsing, tax liability, TLH candidates, wash sales, lot selection |
+| **tax-engine** | 23 | 15 form parsers (1040, Schedules A-E/SE, 8949, 6251, W-2, 1099-B/DIV/INT, K-1, state returns) + 8 calculators (liability, TLH, wash sales, lots, quarterly, Schedule D, state tax, AMT) |
+| **market-intel** | 10 | Company news, SEC filings, economic data (FRED, BLS), analyst recommendations, news sentiment via Finnhub, SEC EDGAR, FRED, BLS, Alpha Vantage |
+| **social-sentiment** | 6 | Social media sentiment via StockTwits, X/Twitter, congressional trading via Quiver Quantitative |
 
 ---
 
@@ -152,11 +154,50 @@ npx skills add <owner>/personal-finance-skill -a claude-code -a cursor -a codex
 | `tax_parse_1099int` | Parse 1099-INT (interest, bond premiums) | READ |
 | `tax_parse_w2` | Parse W-2 (wages, withholding, SS/Medicare) | READ |
 | `tax_parse_k1` | Parse Schedule K-1 (partnership pass-through) | READ |
+| `tax_parse_1040` | Parse Form 1040 (main individual return) | READ |
+| `tax_parse_schedule_a` | Parse Schedule A (itemized deductions, SALT cap) | READ |
+| `tax_parse_schedule_b` | Parse Schedule B (interest/dividends, foreign accounts) | READ |
+| `tax_parse_schedule_c` | Parse Schedule C (self-employment, 23 expense categories) | READ |
+| `tax_parse_schedule_d` | Parse Schedule D (capital gains netting) | READ |
+| `tax_parse_schedule_e` | Parse Schedule E (rental/partnership income) | READ |
+| `tax_parse_schedule_se` | Parse Schedule SE (self-employment tax) | READ |
+| `tax_parse_form_8949` | Parse Form 8949 (capital asset dispositions) | READ |
+| `tax_parse_state_return` | Parse generic state income tax return | READ |
+| `tax_parse_form_6251` | Parse Form 6251 (AMT) | READ |
 | `tax_estimate_liability` | Calculate federal/state tax with brackets | READ |
 | `tax_find_tlh_candidates` | Identify tax-loss harvesting opportunities | READ |
 | `tax_check_wash_sales` | Validate wash sale rule compliance (61-day window) | READ |
 | `tax_lot_selection` | Compare FIFO/LIFO/specific ID for a proposed sale | READ |
 | `tax_quarterly_estimate` | Quarterly estimated payments with safe harbor | READ |
+| `tax_compute_schedule_d` | Schedule D computation with $3K loss cap and carryover | READ |
+| `tax_compute_state_tax` | State income tax (8 states: CA, NY, NJ, IL, PA, MA, TX, FL) | READ |
+| `tax_compute_amt` | Alternative Minimum Tax with 2025 parameters | READ |
+
+### market-intel
+
+| Tool | Description | Risk |
+|:-----|:------------|:----:|
+| `intel_company_news` | Company-specific news articles by ticker (Finnhub) | READ |
+| `intel_market_news` | General/forex/crypto/merger market news (Finnhub) | READ |
+| `intel_stock_fundamentals` | Financial statements, annual/quarterly (Finnhub) | READ |
+| `intel_analyst_recommendations` | Analyst buy/hold/sell recommendations (Finnhub) | READ |
+| `intel_sec_filings` | SEC filing history by company CIK (SEC EDGAR) | READ |
+| `intel_sec_search` | Full-text search of SEC filings (SEC EDGAR) | READ |
+| `intel_fred_series` | Economic data series observations (FRED) | READ |
+| `intel_fred_search` | Search for economic data series (FRED) | READ |
+| `intel_bls_data` | Bureau of Labor Statistics time series (BLS) | READ |
+| `intel_news_sentiment` | News sentiment analysis by ticker/topic (Alpha Vantage) | READ |
+
+### social-sentiment
+
+| Tool | Description | Risk |
+|:-----|:------------|:----:|
+| `social_stocktwits_sentiment` | Sentiment aggregation (bullish/bearish) for a ticker | READ |
+| `social_stocktwits_trending` | Trending symbols on StockTwits | READ |
+| `social_x_search` | Search recent tweets with financial query | READ |
+| `social_x_user_timeline` | Fetch a user's recent tweets | READ |
+| `social_x_cashtag` | Cashtag search ($AAPL) with basic sentiment | READ |
+| `social_quiver_congress` | Congressional stock trading activity (Quiver Quantitative) | READ |
 
 ---
 
@@ -199,7 +240,10 @@ finance_get_state(include: ["positions"])
 
 ```
 tax_parse_w2 + tax_parse_1099b + tax_parse_1099div + tax_parse_1099int
+  + tax_parse_1040 + tax_parse_schedule_c + tax_parse_schedule_se
   -> tax_estimate_liability(filingStatus, income)
+  -> tax_compute_state_tax(stateCode, taxableIncome, filingStatus)
+  -> tax_compute_amt(amtInput)  [if ISO/high-income]
   -> tax_quarterly_estimate(projectedIncome, priorYearTax, paymentsMade)
   -> finance_generate_brief(period: "quarterly")
 ```
@@ -238,7 +282,7 @@ cd personal-finance-skill
 ```
 
 The script will:
-1. Install deps and build all 5 extensions
+1. Install deps and build all 7 extensions
 2. Register each as an OpenClaw plugin (dev-linked via `openclaw plugins install -l`)
 3. Symlink the skill into `~/.openclaw/skills/`
 4. Verify everything is reachable
@@ -262,13 +306,23 @@ export ALPACA_ENV="paper"               # paper | live
 
 # IBKR — https://www.interactivebrokers.com
 export IBKR_BASE_URL="https://localhost:5000/v1/api"
+
+# Market Intelligence
+export FINNHUB_API_KEY="your-key"       # https://finnhub.io
+export FRED_API_KEY="your-key"          # https://fred.stlouisfed.org
+export BLS_API_KEY="your-key"           # https://data.bls.gov
+export ALPHA_VANTAGE_API_KEY="your-key" # https://www.alphavantage.co
+
+# Social Sentiment
+export X_API_BEARER_TOKEN="your-token"  # https://developer.x.com
+export QUIVER_API_KEY="your-key"        # https://www.quiverquant.com
 ```
 
 ### 3. Restart & Verify
 
 ```bash
 openclaw gateway restart
-openclaw plugins list        # should show all 5 extensions
+openclaw plugins list        # should show all 7 extensions
 ```
 
 ### 4. Run Tests
@@ -280,7 +334,7 @@ for ext in extensions/*/; do
 done
 ```
 
-324 tests across 24 test files, all passing.
+612 tests across 55+ test files, all passing.
 
 ---
 
@@ -298,13 +352,17 @@ personal-finance-skill/
     plaid-connect/                      # Adapter: Plaid banking API
     alpaca-trading/                     # Adapter: Alpaca brokerage API
     ibkr-portfolio/                     # Adapter: IBKR Client Portal API
-    tax-engine/                         # Intelligence: tax parsing + strategy
+    tax-engine/                         # Intelligence: tax parsing + strategy (23 tools)
+    market-intel/                       # Intelligence: news, filings, economic data (10 tools)
+    social-sentiment/                   # Intelligence: social sentiment (6 tools)
   references/
     ext-finance-core.md                 # 9 tool schemas + storage layer
     ext-plaid-connect.md                # 8 tool schemas + Link flow
     ext-alpaca-trading.md               # 10 tool schemas + order lifecycle
     ext-ibkr-portfolio.md               # 9 tool schemas + session mgmt
-    ext-tax-engine.md                   # 10 tool schemas + calculators
+    ext-tax-engine.md                   # 23 tool schemas + calculators
+    ext-market-intel.md                 # 10 tool schemas (Finnhub, SEC, FRED, BLS, Alpha Vantage)
+    ext-social-sentiment.md             # 6 tool schemas (StockTwits, X, Quiver)
     data-models-and-schemas.md          # Canonical types + enums
     risk-and-policy-guardrails.md       # Policy engine + approval tiers
     api-plaid.md                        # Plaid API reference
@@ -313,8 +371,6 @@ personal-finance-skill/
     api-openclaw-framework.md           # OpenClaw architecture
     api-openclaw-extension-patterns.md  # Extension patterns
     api-irs-tax-forms.md                # IRS form schemas
-  assets/
-    README.md                           # Legacy setup notes
 ```
 
 ---
@@ -437,7 +493,7 @@ Contributions are welcome! Please:
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feat/my-feature`)
 3. Write tests first (TDD)
-4. Ensure all 324 tests pass
+4. Ensure all 612 tests pass
 5. Submit a PR
 
 See [`CLAUDE.md`](CLAUDE.md) for coding conventions and architecture guidelines.

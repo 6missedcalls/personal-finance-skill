@@ -1,0 +1,37 @@
+{
+  "id": "market-intel",
+  "name": "Market Intelligence",
+  "description": "Company news, SEC filings, economic data, analyst recommendations, and news sentiment from Finnhub, SEC EDGAR, FRED, BLS, and Alpha Vantage",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "finnhubApiKeyEnv": {
+        "type": "string",
+        "description": "Name of env var holding Finnhub API key",
+        "default": "FINNHUB_API_KEY"
+      },
+      "fredApiKeyEnv": {
+        "type": "string",
+        "description": "Name of env var holding FRED API key",
+        "default": "FRED_API_KEY"
+      },
+      "blsApiKeyEnv": {
+        "type": "string",
+        "description": "Name of env var holding BLS API key (v2)",
+        "default": "BLS_API_KEY"
+      },
+      "alphaVantageApiKeyEnv": {
+        "type": "string",
+        "description": "Name of env var holding Alpha Vantage API key",
+        "default": "ALPHA_VANTAGE_API_KEY"
+      },
+      "secEdgarUserAgent": {
+        "type": "string",
+        "description": "User-Agent string for SEC EDGAR (required: company email format)",
+        "default": "PersonalFinanceSkill/1.0 (contact@example.com)"
+      }
+    }
+  }
+}

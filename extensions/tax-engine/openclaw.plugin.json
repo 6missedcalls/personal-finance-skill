@@ -1,7 +1,7 @@
 {
   "id": "tax-engine",
   "name": "Tax Engine",
-  "description": "Tax document parsing, liability estimation, tax-loss harvesting, wash sale detection, lot selection, and quarterly estimated payment calculation.",
+  "description": "Tax document parsing (15 forms: 1040, Schedules A-E/SE, 8949, 6251, W-2, 1099-B/DIV/INT, K-1, state returns), liability estimation, tax-loss harvesting, wash sale detection, lot selection, quarterly estimates, Schedule D computation, state tax brackets (8 states), and AMT calculation",
   "version": "0.1.0",
   "configSchema": {
     "type": "object",

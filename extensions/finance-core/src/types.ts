@@ -5,7 +5,7 @@
 
 // --- Enums & Literals ---
 
-export type DataSource = "plaid" | "alpaca" | "ibkr" | "tax" | "manual"
+export type DataSource = "plaid" | "alpaca" | "ibkr" | "tax" | "manual" | "finnhub" | "sec" | "fred" | "bls" | "stocktwits" | "x"
 
 export type AccountType =
   | "depository"

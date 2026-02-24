@@ -2,11 +2,13 @@
   "name": "finance-core",
   "version": "1.0.0",
   "description": "Canonical financial data layer for the personal finance skill ecosystem",
+  "type": "module",
   "main": "src/index.ts",
   "openclaw": {
     "extensions": ["./src/index.ts"]
   },
   "scripts": {
+    "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

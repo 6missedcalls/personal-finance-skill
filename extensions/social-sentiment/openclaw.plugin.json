@@ -1,0 +1,22 @@
+{
+  "id": "social-sentiment",
+  "name": "Social Sentiment",
+  "description": "Social media sentiment monitoring for financial signals via StockTwits, X/Twitter, and Quiver Quantitative",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "xApiBearerTokenEnv": {
+        "type": "string",
+        "description": "Name of env var holding X API Bearer Token",
+        "default": "X_API_BEARER_TOKEN"
+      },
+      "quiverApiKeyEnv": {
+        "type": "string",
+        "description": "Name of env var holding Quiver Quantitative API key",
+        "default": "QUIVER_API_KEY"
+      }
+    }
+  }
+}

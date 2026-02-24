@@ -4,8 +4,10 @@
 > **Source files:**
 > - `extensions/finance-core/src/types.ts` -- canonical models, derived types, tool contracts
 > - `extensions/tax-engine/src/types.ts` -- tax form schemas, tax strategy types
+> - `extensions/market-intel/src/types.ts` -- market intelligence provider types
+> - `extensions/social-sentiment/src/types.ts` -- social sentiment provider types
 
-All provider-specific data (Plaid, Alpaca, IBKR) is normalized into the canonical types defined in `finance-core`. The `tax-engine` extension defines additional types for IRS form parsing, tax liability computation, tax-loss harvesting, and quarterly estimate planning. Every interface in both files uses `readonly` properties to enforce immutability.
+All provider-specific data (Plaid, Alpaca, IBKR) is normalized into the canonical types defined in `finance-core`. The `tax-engine` extension defines additional types for IRS form parsing (15 forms), tax liability computation, tax-loss harvesting, and quarterly estimate planning. The `market-intel` extension defines types for financial news, SEC filings, economic indicators, and analyst data. The `social-sentiment` extension defines types for social media sentiment from StockTwits, X/Twitter, and Quiver Quantitative. Every interface uses `readonly` properties to enforce immutability.
 
 ---
 
@@ -33,7 +35,7 @@ All enums are TypeScript string literal union types. No runtime enum objects exi
 
 | Type | Values | Purpose |
 |------|--------|---------|
-| `DataSource` | `"plaid"` \| `"alpaca"` \| `"ibkr"` \| `"tax"` \| `"manual"` | Identifies the upstream provider that produced a record |
+| `DataSource` | `"plaid"` \| `"alpaca"` \| `"ibkr"` \| `"tax"` \| `"manual"` \| `"finnhub"` \| `"sec"` \| `"fred"` \| `"bls"` \| `"stocktwits"` \| `"x"` | Identifies the upstream provider that produced a record |
 | `AccountType` | `"depository"` \| `"credit"` \| `"loan"` \| `"investment"` \| `"brokerage"` \| `"retirement"` \| `"mortgage"` \| `"other"` | Broad classification of financial account |
 | `AccountSubtype` | `"checking"` \| `"savings"` \| `"money_market"` \| `"cd"` \| `"credit_card"` \| `"auto_loan"` \| `"student_loan"` \| `"personal_loan"` \| `"mortgage_30"` \| `"mortgage_15"` \| `"heloc"` \| `"ira_traditional"` \| `"ira_roth"` \| `"401k"` \| `"brokerage_taxable"` \| `"brokerage_margin"` \| `"hsa"` \| `"529"` \| `"other"` | Granular account classification |
 | `TransactionStatus` | `"posted"` \| `"pending"` \| `"canceled"` | Lifecycle state of a transaction |
@@ -597,6 +599,202 @@ Schedule K-1 for partnership income.
 | `otherDeductions` | `number` | Other deductions |
 | `selfEmploymentEarnings` | `number` | Self-employment earnings (loss) |
 
+### Form1040
+
+Main individual income tax return (Form 1040).
+
+**Header fields:** `filingStatus`, `taxYear`, `firstName`, `lastName`, `ssn`
+
+| Field | Line | Type | Description |
+|-------|------|------|-------------|
+| `wages` | 1a | `number` | Wages, salaries, tips |
+| `taxExemptInterest` | 2a | `number` | Tax-exempt interest |
+| `taxableInterest` | 2b | `number` | Taxable interest |
+| `qualifiedDividends` | 3a | `number` | Qualified dividends |
+| `ordinaryDividends` | 3b | `number` | Ordinary dividends |
+| `iraDistributions` | 4a | `number` | IRA distributions |
+| `taxableIraDistributions` | 4b | `number` | Taxable IRA distributions |
+| `pensions` | 5a | `number` | Pensions and annuities |
+| `taxablePensions` | 5b | `number` | Taxable pensions |
+| `socialSecurity` | 6a | `number` | Social security benefits |
+| `taxableSocialSecurity` | 6b | `number` | Taxable social security |
+| `capitalGainOrLoss` | 7 | `number` | Capital gain or loss |
+| `otherIncome` | 8 | `number` | Other income |
+| `totalIncome` | 9 | `number` | Total income |
+| `adjustmentsToIncome` | 10 | `number` | Adjustments to income |
+| `adjustedGrossIncome` | 11 | `number` | AGI |
+| `standardOrItemizedDeduction` | 12 | `number` | Standard or itemized deduction |
+| `qualifiedBusinessDeduction` | 13 | `number` | Qualified business income deduction |
+| `totalDeductions` | 14 | `number` | Total deductions |
+| `taxableIncome` | 15 | `number` | Taxable income |
+| `totalTax` | 24 | `number` | Total tax |
+| `totalPayments` | 33 | `number` | Total payments |
+| `amountOwed` | 37 | `number` | Amount owed |
+| `overpaid` | 34 | `number` | Amount overpaid |
+
+### ScheduleA
+
+Itemized deductions.
+
+| Field | Line | Type | Description |
+|-------|------|------|-------------|
+| `medicalAndDentalExpenses` | 1 | `number` | Medical and dental expenses |
+| `medicalThreshold` | 3 | `number` | 7.5% of AGI threshold |
+| `deductibleMedical` | 4 | `number` | Deductible medical expenses |
+| `stateAndLocalTaxes` | 5a-5d | `number` | State and local taxes |
+| `saltDeductionCapped` | 5e | `number` | SALT deduction (capped at $10,000) |
+| `homeInterest` | 8a-8c | `number` | Home mortgage interest |
+| `charitableCashContributions` | 11 | `number` | Charitable cash contributions |
+| `charitableNonCash` | 12 | `number` | Charitable non-cash contributions |
+| `charitableCarryover` | 13 | `number` | Charitable carryover from prior year |
+| `totalCharitable` | 14 | `number` | Total charitable deductions |
+| `casualtyAndTheftLosses` | 15 | `number` | Casualty and theft losses |
+| `otherItemizedDeductions` | 16 | `number` | Other itemized deductions |
+| `totalItemizedDeductions` | 17 | `number` | Total itemized deductions |
+
+### ScheduleB
+
+Interest and ordinary dividends.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `interestPayors` | `ReadonlyArray<{ name: string; amount: number }>` | Interest payor list |
+| `totalInterest` | `number` | Total interest income |
+| `dividendPayors` | `ReadonlyArray<{ name: string; amount: number }>` | Dividend payor list |
+| `totalOrdinaryDividends` | `number` | Total ordinary dividends |
+| `hasForeignAccountOrTrust` | `boolean` | Foreign account reporting flag |
+| `foreignCountries` | `ReadonlyArray<string>` | Foreign countries list |
+
+### ScheduleC
+
+Profit or loss from business (sole proprietorship).
+
+**Header fields:** `businessName`, `principalBusinessCode`, `businessEin`, `accountingMethod`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `grossReceipts` | `number` | Gross receipts or sales |
+| `returnsAndAllowances` | `number` | Returns and allowances |
+| `costOfGoodsSold` | `number` | Cost of goods sold |
+| `grossProfit` | `number` | Gross profit |
+| `otherIncome` | `number` | Other business income |
+| `grossIncome` | `number` | Gross income |
+| `expenses` | `ScheduleCExpenses` | Itemized business expenses (23 categories) |
+| `totalExpenses` | `number` | Total business expenses |
+| `netProfitOrLoss` | `number` | Net profit or loss |
+
+**ScheduleCExpenses** includes: `advertising`, `carAndTruckExpenses`, `commissions`, `contractLabor`, `depletion`, `depreciation`, `employeeBenefits`, `insurance`, `interestMortgage`, `interestOther`, `legalAndProfessional`, `officeExpense`, `pensionAndProfitSharing`, `rentVehicles`, `rentOther`, `repairs`, `supplies`, `taxesAndLicenses`, `travel`, `meals`, `utilities`, `wages`, `otherExpenses` -- all `number`.
+
+### ScheduleD
+
+Capital gains and losses (netting).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `shortTermFromForm8949` | `number` | Short-term gain/loss from Form 8949 |
+| `shortTermFromScheduleK1` | `number` | Short-term from Schedule K-1 |
+| `shortTermCapitalLossCarryover` | `number` | Short-term capital loss carryover |
+| `netShortTermGainLoss` | `number` | Net short-term gain or loss |
+| `longTermFromForm8949` | `number` | Long-term gain/loss from Form 8949 |
+| `longTermFromScheduleK1` | `number` | Long-term from Schedule K-1 |
+| `longTermCapitalGainDistributions` | `number` | Long-term capital gain distributions |
+| `longTermCapitalLossCarryover` | `number` | Long-term capital loss carryover |
+| `netLongTermGainLoss` | `number` | Net long-term gain or loss |
+| `netGainLoss` | `number` | Combined net gain or loss |
+| `qualifiesForExceptionToForm4952` | `boolean` | Exception to Form 4952 |
+| `taxComputationMethod` | `"regular"` \| `"schedule_d_worksheet"` \| `"qualified_dividends_worksheet"` | Tax computation method |
+
+### ScheduleE
+
+Supplemental income and loss (rental, royalty, partnerships, S corporations).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `rentalProperties` | `ReadonlyArray<ScheduleERental>` | Rental property details |
+| `partnershipAndSCorpIncome` | `ReadonlyArray<ScheduleEPartnership>` | Partnership/S corp details |
+| `totalRentalIncomeLoss` | `number` | Total rental income or loss |
+| `totalPartnershipIncomeLoss` | `number` | Total partnership income or loss |
+| `totalScheduleEIncomeLoss` | `number` | Total Schedule E income or loss |
+
+**ScheduleERental:** `propertyAddress`, `propertyType`, `personalUseDays`, `fairRentalDays`, `rentsReceived`, `expenses` (15 categories: advertising, auto, cleaning, commissions, insurance, legal, management, mortgage, otherInterest, repairs, supplies, taxes, utilities, depreciation, other), `totalExpenses`, `netIncomeLoss`.
+
+**ScheduleEPartnership:** `entityName`, `entityEin`, `isPassiveActivity`, `ordinaryIncomeLoss`, `netRentalIncomeLoss`, `otherIncomeLoss`.
+
+### ScheduleSE
+
+Self-employment tax.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `netEarningsFromSelfEmployment` | `number` | Net SE earnings (92.35% of Schedule C net profit) |
+| `socialSecurityWageBase` | `number` | SS wage base for the tax year |
+| `socialSecurityTax` | `number` | Social security tax (12.4% up to wage base) |
+| `medicareTax` | `number` | Medicare tax (2.9% on all SE earnings) |
+| `additionalMedicareTax` | `number` | Additional Medicare tax (0.9% over $200K/$250K) |
+| `totalSelfEmploymentTax` | `number` | Total SE tax |
+| `deductiblePartOfSeTax` | `number` | Deductible half of SE tax |
+
+### Form8949
+
+Sales and other dispositions of capital assets.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `shortTermPartI` | `ReadonlyArray<Form8949Transaction>` | Short-term transactions (Part I) |
+| `longTermPartII` | `ReadonlyArray<Form8949Transaction>` | Long-term transactions (Part II) |
+| `totalShortTermProceeds` | `number` | Total short-term proceeds |
+| `totalShortTermBasis` | `number` | Total short-term basis |
+| `totalShortTermAdjustments` | `number` | Total short-term adjustments |
+| `totalShortTermGainLoss` | `number` | Total short-term gain/loss |
+| `totalLongTermProceeds` | `number` | Total long-term proceeds |
+| `totalLongTermBasis` | `number` | Total long-term basis |
+| `totalLongTermAdjustments` | `number` | Total long-term adjustments |
+| `totalLongTermGainLoss` | `number` | Total long-term gain/loss |
+
+**Form8949Transaction:** `description`, `dateAcquired` (string \| null), `dateSold`, `proceeds`, `costBasis`, `adjustmentCode`, `adjustmentAmount`, `gainOrLoss`.
+
+### StateReturn
+
+Generic state income tax return (supports any state form: CA 540, NY IT-201, etc.).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `stateCode` | `string` | Two-letter state code (e.g., "CA", "NY") |
+| `formId` | `string` | State form identifier |
+| `filingStatus` | `FilingStatus` | Filing status |
+| `federalAGI` | `number` | Federal AGI |
+| `stateAdditions` | `number` | State additions to income |
+| `stateSubtractions` | `number` | State subtractions from income |
+| `stateAGI` | `number` | State AGI |
+| `stateDeductions` | `number` | State deductions |
+| `stateTaxableIncome` | `number` | State taxable income |
+| `stateTaxComputed` | `number` | Computed state tax |
+| `stateCredits` | `number` | State tax credits |
+| `stateWithholding` | `number` | State tax withholding |
+| `stateEstimatedPayments` | `number` | State estimated payments |
+| `stateBalanceDue` | `number` | State balance due |
+| `stateOverpayment` | `number` | State overpayment |
+
+### Form6251
+
+Alternative Minimum Tax (AMT).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `taxableIncomeFromForm1040` | `number` | Taxable income from Form 1040 |
+| `stateAndLocalTaxDeduction` | `number` | SALT deduction add-back |
+| `taxExemptInterest` | `number` | Tax-exempt interest from private activity bonds |
+| `incentiveStockOptions` | `number` | ISO bargain element |
+| `otherAdjustments` | `number` | Other AMT adjustments |
+| `alternativeMinimumTaxableIncome` | `number` | AMTI |
+| `exemptionAmount` | `number` | AMT exemption amount |
+| `amtExemptionPhaseout` | `number` | Exemption phaseout amount |
+| `reducedExemption` | `number` | Reduced exemption after phaseout |
+| `amtTaxableAmount` | `number` | AMT taxable amount |
+| `tentativeMinimumTax` | `number` | Tentative minimum tax |
+| `regularTax` | `number` | Regular tax from Form 1040 |
+| `alternativeMinimumTax` | `number` | AMT = max(0, TMT - regular tax) |
+
 ---
 
 ## 8. Tax Strategy Types
@@ -763,6 +961,48 @@ Result of computing optimal lots to sell for a given trade.
 | `max` | `number \| null` | Upper bound (null for the top bracket) |
 | `rate` | `number` | Tax rate for this bracket |
 
+### ScheduleDResult
+
+Result of Schedule D capital gains computation (from `tax_compute_schedule_d`).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `netShortTermGainLoss` | `number` | Net short-term gain or loss |
+| `netLongTermGainLoss` | `number` | Net long-term gain or loss |
+| `netCapitalGainLoss` | `number` | Combined net capital gain or loss |
+| `capitalLossDeduction` | `number` | Capital loss deduction (capped at $3,000; $1,500 MFS) |
+| `carryoverToNextYear` | `{ shortTerm: number; longTerm: number }` | Character-preserving carryover |
+| `qualifiesForPreferentialRates` | `boolean` | Whether long-term gains qualify for preferential rates |
+
+### StateTaxResult
+
+Result of state tax computation (from `tax_compute_state_tax`). Supports 8 states: CA, NY, NJ (progressive), IL, PA (flat), MA (flat + millionaire's surtax), TX, FL (no income tax).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `stateCode` | `string` | Two-letter state code |
+| `taxableIncome` | `number` | State taxable income |
+| `stateTax` | `number` | Computed state tax |
+| `effectiveRate` | `number` | Effective tax rate |
+| `marginalRate` | `number` | Marginal tax rate |
+| `brackets` | `ReadonlyArray<{ min: number; max: number \| null; rate: number }>` | State tax brackets used |
+| `notes` | `ReadonlyArray<string>` | Notable conditions (e.g., "MA millionaire's surtax applies") |
+
+### AmtResult
+
+Result of AMT computation (from `tax_compute_amt`). Uses 2025 parameters.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `amti` | `number` | Alternative Minimum Taxable Income |
+| `exemptionAmount` | `number` | AMT exemption for filing status |
+| `exemptionPhaseoutStart` | `number` | Phaseout threshold for filing status |
+| `reducedExemption` | `number` | Exemption after phaseout (25% reduction rate) |
+| `amtBase` | `number` | AMTI minus reduced exemption |
+| `tentativeMinimumTax` | `number` | TMT (26% on first $248,300; 28% above) |
+| `alternativeMinimumTax` | `number` | max(0, TMT - regular tax) |
+| `isSubjectToAmt` | `boolean` | Whether AMT applies |
+
 ---
 
 ## 9. Tool Input/Output Contracts
@@ -783,16 +1023,70 @@ These types define the structured inputs and outputs for OpenClaw tools. All too
 | Generate Brief | `GenerateBriefInput` | `FinancialBrief` | Generate a periodic financial brief |
 | Policy Check | `PolicyCheckInput` | `PolicyCheckResult` | Evaluate an action against policy rules |
 
-### tax-engine Tools
+### tax-engine Tools (23 tools: 15 parsers + 8 calculators)
+
+**Parsers** — all accept `ParseFormInput` and return `ParseFormOutput<T>`:
+
+| Tool | Output Schema | Description |
+|------|--------------|-------------|
+| `tax_parse_w2` | `FormW2` | Parse W-2 wage and tax statement |
+| `tax_parse_1099b` | `Form1099B` | Parse 1099-B broker transactions |
+| `tax_parse_1099div` | `Form1099DIV` | Parse 1099-DIV dividends |
+| `tax_parse_1099int` | `Form1099INT` | Parse 1099-INT interest income |
+| `tax_parse_k1` | `FormK1` | Parse Schedule K-1 partnership income |
+| `tax_parse_1040` | `Form1040` | Parse Form 1040 main return |
+| `tax_parse_schedule_a` | `ScheduleA` | Parse Schedule A itemized deductions |
+| `tax_parse_schedule_b` | `ScheduleB` | Parse Schedule B interest/dividends |
+| `tax_parse_schedule_c` | `ScheduleC` | Parse Schedule C self-employment |
+| `tax_parse_schedule_d` | `ScheduleD` | Parse Schedule D capital gains netting |
+| `tax_parse_schedule_e` | `ScheduleE` | Parse Schedule E rental/partnership income |
+| `tax_parse_schedule_se` | `ScheduleSE` | Parse Schedule SE self-employment tax |
+| `tax_parse_form_8949` | `Form8949` | Parse Form 8949 capital asset dispositions |
+| `tax_parse_state_return` | `StateReturn` | Parse generic state income tax return |
+| `tax_parse_form_6251` | `Form6251` | Parse Form 6251 AMT |
+
+**Calculators:**
 
 | Tool | Input Type | Output Type | Description |
 |------|-----------|-------------|-------------|
-| Parse Form | `ParseFormInput` | `ParseFormOutput<T>` | Parse raw tax form data into typed schema |
-| Estimate Liability | `EstimateLiabilityInput` | `TaxLiabilityResult` | Compute estimated tax liability |
-| Find TLH Candidates | `FindTlhInput` | `ReadonlyArray<TlhCandidate>` | Identify tax-loss harvesting opportunities |
-| Check Wash Sales | `CheckWashSalesInput` | `WashSaleCheckResult` | Detect wash sale violations |
-| Lot Selection | `LotSelectionInput` | `LotSelectionResult` | Optimize which lots to sell |
-| Quarterly Estimates | `QuarterlyEstimateInput` | `QuarterlyEstimateResult` | Plan quarterly estimated tax payments |
+| `tax_estimate_liability` | `EstimateLiabilityInput` | `TaxLiabilityResult` | Compute estimated federal + state tax liability |
+| `tax_find_tlh_candidates` | `FindTlhInput` | `ReadonlyArray<TlhCandidate>` | Identify tax-loss harvesting opportunities |
+| `tax_check_wash_sales` | `CheckWashSalesInput` | `WashSaleCheckResult` | Detect wash sale violations |
+| `tax_lot_selection` | `LotSelectionInput` | `LotSelectionResult` | Optimize which lots to sell |
+| `tax_quarterly_estimates` | `QuarterlyEstimateInput` | `QuarterlyEstimateResult` | Plan quarterly estimated tax payments |
+| `tax_compute_schedule_d` | `ScheduleDInput` | `ScheduleDResult` | Compute Schedule D capital gains netting with $3K loss cap and carryover |
+| `tax_compute_state_tax` | `{ stateCode, taxableIncome, filingStatus }` | `StateTaxResult` | Compute state income tax (8 states: CA, NY, NJ, IL, PA, MA, TX, FL) |
+| `tax_compute_amt` | `AmtInput` | `AmtResult` | Compute Alternative Minimum Tax with 2025 parameters |
+
+### market-intel Tools (10 tools)
+
+All tools are read-only. Each accepts provider-specific input and returns `ToolResult<T>`.
+
+| Tool | Provider | Description |
+|------|----------|-------------|
+| `intel_company_news` | Finnhub | Company-specific news articles by ticker |
+| `intel_market_news` | Finnhub | General/forex/crypto/merger market news |
+| `intel_stock_fundamentals` | Finnhub | Financial statements (annual/quarterly) |
+| `intel_analyst_recommendations` | Finnhub | Analyst buy/hold/sell recommendations |
+| `intel_sec_filings` | SEC EDGAR | SEC filing history by company CIK |
+| `intel_sec_search` | SEC EDGAR | Full-text search of SEC filings |
+| `intel_fred_series` | FRED | Economic data series observations |
+| `intel_fred_search` | FRED | Search for economic data series |
+| `intel_bls_data` | BLS | Bureau of Labor Statistics time series |
+| `intel_news_sentiment` | Alpha Vantage | News sentiment analysis by ticker/topic |
+
+### social-sentiment Tools (6 tools)
+
+All tools are read-only. Each accepts provider-specific input and returns `ToolResult<T>`.
+
+| Tool | Provider | Description |
+|------|----------|-------------|
+| `social_stocktwits_sentiment` | StockTwits | Sentiment aggregation (bullish/bearish) for a ticker |
+| `social_stocktwits_trending` | StockTwits | Trending symbols on StockTwits |
+| `social_x_search` | X/Twitter | Search recent tweets with financial query |
+| `social_x_user_timeline` | X/Twitter | Fetch a user's recent tweets |
+| `social_x_cashtag` | X/Twitter | Cashtag search ($AAPL) with basic sentiment |
+| `social_quiver_congress` | Quiver Quantitative | Congressional stock trading activity |
 
 ---
 
@@ -817,10 +1111,17 @@ The normalization layer converts provider-specific data formats into canonical t
 
 | Document | Location | Relevance |
 |----------|----------|-----------|
+| Finance-Core Extension | `references/ext-finance-core.md` | 9 tools — storage, normalization, policy, briefs |
+| Plaid Connect Extension | `references/ext-plaid-connect.md` | 8 tools — Plaid Link, accounts, transactions |
+| Alpaca Trading Extension | `references/ext-alpaca-trading.md` | 10 tools — trading, positions, market data |
+| IBKR Portfolio Extension | `references/ext-ibkr-portfolio.md` | 9 tools — portfolio, allocation, performance |
+| Tax Engine Extension | `references/ext-tax-engine.md` | 23 tools — 15 parsers + 8 calculators |
+| Market Intel Extension | `references/ext-market-intel.md` | 10 tools — news, SEC filings, economic data, sentiment |
+| Social Sentiment Extension | `references/ext-social-sentiment.md` | 6 tools — StockTwits, X/Twitter, Quiver |
+| Risk and Policy Guardrails | `references/risk-and-policy-guardrails.md` | Policy engine, approval tiers, hard rules |
 | Plaid API Reference | `references/api-plaid.md` | Plaid endpoint schemas, webhook payloads, error codes |
 | Alpaca Trading API Reference | `references/api-alpaca-trading.md` | Alpaca account, order, and position schemas |
 | IBKR Client Portal API Reference | `references/api-ibkr-client-portal.md` | IBKR Web API endpoints and response formats |
 | IRS Tax Forms & Rules | `references/api-irs-tax-forms.md` | Form field definitions, tax brackets, filing rules |
 | OpenClaw Extension Patterns | `references/api-openclaw-extension-patterns.md` | How to build extensions, tool registration format |
 | OpenClaw Framework | `references/api-openclaw-framework.md` | Architecture, plugin lifecycle, agent integration |
-| Skill Architecture Design | `~/.agents/skills/personal-finance/skill-architecture-design.md` | System design, data flow diagrams, extension boundaries |

@@ -1,6 +1,7 @@
 {
   "name": "@personal-finance/tax-engine",
   "version": "0.1.0",
+  "description": "Tax document parsing (15 forms), liability estimation, TLH, wash sales, lot selection, quarterly estimates, Schedule D, state tax, and AMT for OpenClaw",
   "private": true,
   "type": "module",
   "openclaw": {

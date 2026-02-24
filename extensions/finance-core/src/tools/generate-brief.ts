@@ -117,13 +117,13 @@ export const generateBriefTool = {
             positionCount: positions.length,
             totalMarketValue: totalValue,
             unrealizedGainLoss: totalGainLoss,
-            topPositions: positions
+            topPositions: [...positions]
               .sort((a, b) => b.marketValue - a.marketValue)
               .slice(0, 5)
               .map((p) => ({
                 symbol: p.symbol,
                 marketValue: p.marketValue,
-                gainLoss: p.unrealizedGainLoss,
+                gainLoss: p.unrealizedGainLoss ?? 0,
               })),
           },
         })

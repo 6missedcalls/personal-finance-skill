@@ -378,3 +378,258 @@ export interface QuarterlyEstimateInput {
     readonly datePaid: string
   }>
 }
+
+// ── Form 1040 ──────────────────────────────────────────────────────
+
+export interface Form1040 {
+  readonly filingStatus: FilingStatus
+  readonly taxYear: number
+  readonly firstName: string
+  readonly lastName: string
+  readonly ssn: string
+  readonly wages: number
+  readonly taxExemptInterest: number
+  readonly taxableInterest: number
+  readonly qualifiedDividends: number
+  readonly ordinaryDividends: number
+  readonly iraDistributions: number
+  readonly taxableIraDistributions: number
+  readonly pensions: number
+  readonly taxablePensions: number
+  readonly socialSecurity: number
+  readonly taxableSocialSecurity: number
+  readonly capitalGainOrLoss: number
+  readonly otherIncome: number
+  readonly totalIncome: number
+  readonly adjustmentsToIncome: number
+  readonly adjustedGrossIncome: number
+  readonly standardOrItemizedDeduction: number
+  readonly qualifiedBusinessDeduction: number
+  readonly totalDeductions: number
+  readonly taxableIncome: number
+  readonly totalTax: number
+  readonly totalPayments: number
+  readonly amountOwed: number
+  readonly overpaid: number
+}
+
+// ── Schedule A ─────────────────────────────────────────────────────
+
+export interface ScheduleA {
+  readonly taxYear: number
+  readonly medicalAndDentalExpenses: number
+  readonly medicalThreshold: number
+  readonly deductibleMedical: number
+  readonly stateAndLocalTaxes: number
+  readonly saltDeductionCapped: number
+  readonly homeInterest: number
+  readonly charitableCashContributions: number
+  readonly charitableNonCash: number
+  readonly charitableCarryover: number
+  readonly totalCharitable: number
+  readonly casualtyAndTheftLosses: number
+  readonly otherItemizedDeductions: number
+  readonly totalItemizedDeductions: number
+}
+
+// ── Schedule B ─────────────────────────────────────────────────────
+
+export interface ScheduleB {
+  readonly taxYear: number
+  readonly interestPayors: ReadonlyArray<{ readonly name: string; readonly amount: number }>
+  readonly totalInterest: number
+  readonly dividendPayors: ReadonlyArray<{ readonly name: string; readonly amount: number }>
+  readonly totalOrdinaryDividends: number
+  readonly hasForeignAccountOrTrust: boolean
+  readonly foreignCountries: ReadonlyArray<string>
+}
+
+// ── Schedule C ─────────────────────────────────────────────────────
+
+export interface ScheduleC {
+  readonly taxYear: number
+  readonly businessName: string
+  readonly principalBusinessCode: string
+  readonly businessEin: string
+  readonly accountingMethod: "cash" | "accrual" | "other"
+  readonly grossReceipts: number
+  readonly returnsAndAllowances: number
+  readonly costOfGoodsSold: number
+  readonly grossProfit: number
+  readonly otherIncome: number
+  readonly grossIncome: number
+  readonly expenses: ScheduleCExpenses
+  readonly totalExpenses: number
+  readonly netProfitOrLoss: number
+}
+
+export interface ScheduleCExpenses {
+  readonly advertising: number
+  readonly carAndTruckExpenses: number
+  readonly commissions: number
+  readonly contractLabor: number
+  readonly depletion: number
+  readonly depreciation: number
+  readonly employeeBenefits: number
+  readonly insurance: number
+  readonly interestMortgage: number
+  readonly interestOther: number
+  readonly legalAndProfessional: number
+  readonly officeExpense: number
+  readonly pensionAndProfitSharing: number
+  readonly rentVehicles: number
+  readonly rentOther: number
+  readonly repairs: number
+  readonly supplies: number
+  readonly taxesAndLicenses: number
+  readonly travel: number
+  readonly meals: number
+  readonly utilities: number
+  readonly wages: number
+  readonly otherExpenses: number
+}
+
+// ── Schedule D ─────────────────────────────────────────────────────
+
+export interface ScheduleD {
+  readonly taxYear: number
+  readonly shortTermFromForm8949: number
+  readonly shortTermFromScheduleK1: number
+  readonly shortTermCapitalLossCarryover: number
+  readonly netShortTermGainLoss: number
+  readonly longTermFromForm8949: number
+  readonly longTermFromScheduleK1: number
+  readonly longTermCapitalGainDistributions: number
+  readonly longTermCapitalLossCarryover: number
+  readonly netLongTermGainLoss: number
+  readonly netGainLoss: number
+  readonly qualifiesForExceptionToForm4952: boolean
+  readonly taxComputationMethod: "regular" | "schedule_d_worksheet" | "qualified_dividends_worksheet"
+}
+
+// ── Schedule E ─────────────────────────────────────────────────────
+
+export interface ScheduleE {
+  readonly taxYear: number
+  readonly rentalProperties: ReadonlyArray<ScheduleERental>
+  readonly partnershipAndSCorpIncome: ReadonlyArray<ScheduleEPartnership>
+  readonly totalRentalIncomeLoss: number
+  readonly totalPartnershipIncomeLoss: number
+  readonly totalScheduleEIncomeLoss: number
+}
+
+export interface ScheduleERental {
+  readonly propertyAddress: string
+  readonly propertyType: string
+  readonly personalUseDays: number
+  readonly fairRentalDays: number
+  readonly rentsReceived: number
+  readonly expenses: {
+    readonly advertising: number
+    readonly auto: number
+    readonly cleaning: number
+    readonly commissions: number
+    readonly insurance: number
+    readonly legal: number
+    readonly management: number
+    readonly mortgage: number
+    readonly otherInterest: number
+    readonly repairs: number
+    readonly supplies: number
+    readonly taxes: number
+    readonly utilities: number
+    readonly depreciation: number
+    readonly other: number
+  }
+  readonly totalExpenses: number
+  readonly netIncomeLoss: number
+}
+
+export interface ScheduleEPartnership {
+  readonly entityName: string
+  readonly entityEin: string
+  readonly isPassiveActivity: boolean
+  readonly ordinaryIncomeLoss: number
+  readonly netRentalIncomeLoss: number
+  readonly otherIncomeLoss: number
+}
+
+// ── Schedule SE ────────────────────────────────────────────────────
+
+export interface ScheduleSE {
+  readonly taxYear: number
+  readonly netEarningsFromSelfEmployment: number
+  readonly socialSecurityWageBase: number
+  readonly socialSecurityTax: number
+  readonly medicareTax: number
+  readonly additionalMedicareTax: number
+  readonly totalSelfEmploymentTax: number
+  readonly deductiblePartOfSeTax: number
+}
+
+// ── Form 8949 ──────────────────────────────────────────────────────
+
+export interface Form8949 {
+  readonly taxYear: number
+  readonly shortTermPartI: ReadonlyArray<Form8949Transaction>
+  readonly longTermPartII: ReadonlyArray<Form8949Transaction>
+  readonly totalShortTermProceeds: number
+  readonly totalShortTermBasis: number
+  readonly totalShortTermAdjustments: number
+  readonly totalShortTermGainLoss: number
+  readonly totalLongTermProceeds: number
+  readonly totalLongTermBasis: number
+  readonly totalLongTermAdjustments: number
+  readonly totalLongTermGainLoss: number
+}
+
+export interface Form8949Transaction {
+  readonly description: string
+  readonly dateAcquired: string | null
+  readonly dateSold: string
+  readonly proceeds: number
+  readonly costBasis: number
+  readonly adjustmentCode: string
+  readonly adjustmentAmount: number
+  readonly gainOrLoss: number
+}
+
+// ── State Return (generic) ─────────────────────────────────────────
+
+export interface StateReturn {
+  readonly taxYear: number
+  readonly stateCode: string
+  readonly formId: string
+  readonly filingStatus: FilingStatus
+  readonly federalAGI: number
+  readonly stateAdditions: number
+  readonly stateSubtractions: number
+  readonly stateAGI: number
+  readonly stateDeductions: number
+  readonly stateTaxableIncome: number
+  readonly stateTaxComputed: number
+  readonly stateCredits: number
+  readonly stateWithholding: number
+  readonly stateEstimatedPayments: number
+  readonly stateBalanceDue: number
+  readonly stateOverpayment: number
+}
+
+// ── Form 6251 (AMT) ───────────────────────────────────────────────
+
+export interface Form6251 {
+  readonly taxYear: number
+  readonly taxableIncomeFromForm1040: number
+  readonly stateAndLocalTaxDeduction: number
+  readonly taxExemptInterest: number
+  readonly incentiveStockOptions: number
+  readonly otherAdjustments: number
+  readonly alternativeMinimumTaxableIncome: number
+  readonly exemptionAmount: number
+  readonly amtExemptionPhaseout: number
+  readonly reducedExemption: number
+  readonly amtTaxableAmount: number
+  readonly tentativeMinimumTax: number
+  readonly regularTax: number
+  readonly alternativeMinimumTax: number
+}

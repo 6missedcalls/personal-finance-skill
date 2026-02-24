@@ -3,16 +3,16 @@
 > **Extension:** `tax-engine`
 > **Name:** Tax Engine
 > **Version:** 0.1.0
-> **Description:** Tax document parsing, liability estimation, tax-loss harvesting, wash sale detection, lot selection, and quarterly estimated payment calculation.
+> **Description:** Tax document parsing (Form 1040, Schedules A–E/SE, Form 8949, Form 6251, 1099-B/DIV/INT, W-2, K-1, state returns), liability estimation, capital gains netting, state tax computation, AMT calculation, tax-loss harvesting, wash sale detection, lot selection, and quarterly estimated payment calculation.
 > **Last updated:** 2026-02-23
 
 ---
 
 ## Overview
 
-The `tax-engine` extension consolidates tax document parsing and tax strategy computation into a single OpenClaw plugin. It provides five parser tools that normalize raw tax form data (1099-B, 1099-DIV, 1099-INT, W-2, Schedule K-1) into structured canonical objects, and five calculator tools that perform deterministic tax computations (liability estimation, tax-loss harvesting candidate identification, wash sale compliance checking, lot selection comparison, and quarterly estimated payment scheduling).
+The `tax-engine` extension consolidates tax document parsing and tax strategy computation into a single OpenClaw plugin. It provides **fifteen parser tools** that normalize raw tax form data (Form 1040, Schedules A–E, Schedule SE, Schedule D, Form 8949, Form 6251/AMT, 1099-B, 1099-DIV, 1099-INT, W-2, Schedule K-1, and generic state returns) into structured canonical objects, and **eight calculator tools** that perform deterministic tax computations (liability estimation, capital gains netting, state income tax, Alternative Minimum Tax, tax-loss harvesting candidate identification, wash sale compliance checking, lot selection comparison, and quarterly estimated payment scheduling).
 
-All ten tools are **READ-ONLY**. Parsers accept raw form field values and return validated, structured output. Calculators accept structured financial data and return deterministic numeric results. No tool in this extension modifies external state, places trades, or initiates transfers. Any action arising from tax-engine analysis (such as executing a tax-loss harvest) must go through the appropriate execution extension (e.g., `alpaca-trading`) with policy checks enforced by `finance-core`.
+All twenty-three tools are **READ-ONLY**. Parsers accept raw form field values and return validated, structured output. Calculators accept structured financial data and return deterministic numeric results. No tool in this extension modifies external state, places trades, or initiates transfers. Any action arising from tax-engine analysis (such as executing a tax-loss harvest) must go through the appropriate execution extension (e.g., `alpaca-trading`) with policy checks enforced by `finance-core`.
 
 ---
 
@@ -25,7 +25,7 @@ All ten tools are **READ-ONLY**. Parsers accept raw form field values and return
   "id": "tax-engine",
   "name": "Tax Engine",
   "version": "0.1.0",
-  "description": "Tax document parsing, liability estimation, tax-loss harvesting, wash sale detection, lot selection, and quarterly estimated payment calculation.",
+  "description": "Tax document parsing (Form 1040, Schedules A-E/SE/D, Form 8949, Form 6251, 1099s, W-2, K-1, state returns), liability estimation, capital gains netting, state tax, AMT, tax-loss harvesting, wash sale detection, lot selection, and quarterly estimated payments.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -61,25 +61,38 @@ All ten tools are **READ-ONLY**. Parsers accept raw form field values and return
 
 ## Tool Catalog
 
-### Parsers (5 tools)
+### Parsers (15 tools)
 
-| Tool                  | Description                                                                                  | Risk Tier  |
-|-----------------------|----------------------------------------------------------------------------------------------|------------|
-| `tax_parse_1099b`     | Parse 1099-B data (proceeds, cost basis, wash sales, gain type).                             | READ-ONLY  |
-| `tax_parse_1099div`   | Parse 1099-DIV data (ordinary/qualified dividends, capital gain distributions, foreign tax).  | READ-ONLY  |
-| `tax_parse_1099int`   | Parse 1099-INT data (interest income, bond premiums, tax-exempt interest).                   | READ-ONLY  |
-| `tax_parse_w2`        | Parse W-2 data (wages, withholding, Social Security, Medicare, Box 12 codes).                | READ-ONLY  |
-| `tax_parse_k1`        | Parse Schedule K-1 data (partnership pass-through income, gains, deductions).                | READ-ONLY  |
+| #  | Tool                       | Description                                                                                  | Risk Tier  |
+|----|----------------------------|----------------------------------------------------------------------------------------------|------------|
+| 1  | `tax_parse_1099b`          | Parse 1099-B data (proceeds, cost basis, wash sales, gain type).                             | READ-ONLY  |
+| 2  | `tax_parse_1099div`        | Parse 1099-DIV data (ordinary/qualified dividends, capital gain distributions, foreign tax).  | READ-ONLY  |
+| 3  | `tax_parse_1099int`        | Parse 1099-INT data (interest income, bond premiums, tax-exempt interest).                   | READ-ONLY  |
+| 4  | `tax_parse_w2`             | Parse W-2 data (wages, withholding, Social Security, Medicare, Box 12 codes).                | READ-ONLY  |
+| 5  | `tax_parse_k1`             | Parse Schedule K-1 data (partnership pass-through income, gains, deductions).                | READ-ONLY  |
+| 6  | `tax_parse_1040`           | Parse Form 1040 (main individual tax return — income, deductions, tax, payments).            | READ-ONLY  |
+| 7  | `tax_parse_schedule_a`     | Parse Schedule A (itemized deductions: medical, SALT, mortgage interest, charitable).        | READ-ONLY  |
+| 8  | `tax_parse_schedule_b`     | Parse Schedule B (interest and ordinary dividend detail, foreign account reporting).         | READ-ONLY  |
+| 9  | `tax_parse_schedule_c`     | Parse Schedule C (self-employment profit/loss: gross receipts, expenses, net income).        | READ-ONLY  |
+| 10 | `tax_parse_schedule_d`     | Parse Schedule D (capital gains and losses netting, carryover, tax computation method).      | READ-ONLY  |
+| 11 | `tax_parse_schedule_e`     | Parse Schedule E (rental/royalty income, partnership/S-Corp pass-through income).            | READ-ONLY  |
+| 12 | `tax_parse_schedule_se`    | Parse Schedule SE (self-employment tax: SS, Medicare, additional Medicare, deductible half).  | READ-ONLY  |
+| 13 | `tax_parse_form_8949`      | Parse Form 8949 (sales and dispositions — short-term Part I, long-term Part II).             | READ-ONLY  |
+| 14 | `tax_parse_state_return`   | Parse generic state return data (CA 540, NY IT-201, etc. — state AGI, tax, balance due).     | READ-ONLY  |
+| 15 | `tax_parse_form_6251`      | Parse Form 6251 (Alternative Minimum Tax — AMTI, exemptions, tentative/actual AMT).         | READ-ONLY  |
 
-### Calculators (5 tools)
+### Calculators (8 tools)
 
-| Tool                    | Description                                                                                        | Risk Tier  |
-|-------------------------|----------------------------------------------------------------------------------------------------|------------|
-| `tax_estimate_liability`| Calculate estimated federal and state tax liability using progressive brackets.                     | READ-ONLY  |
-| `tax_find_tlh_candidates`| Identify tax-loss harvesting opportunities from current positions.                                | READ-ONLY  |
-| `tax_check_wash_sales`  | Validate wash sale rule compliance across a 61-day window.                                         | READ-ONLY  |
-| `tax_lot_selection`     | Compare FIFO, LIFO, and specific lot identification strategies for a proposed sale.                | READ-ONLY  |
-| `tax_quarterly_estimate`| Calculate quarterly estimated tax payments with safe harbor analysis.                              | READ-ONLY  |
+| #  | Tool                       | Description                                                                                        | Risk Tier  |
+|----|----------------------------|----------------------------------------------------------------------------------------------------|------------|
+| 16 | `tax_estimate_liability`   | Calculate estimated federal and state tax liability using progressive brackets.                     | READ-ONLY  |
+| 17 | `tax_find_tlh_candidates`  | Identify tax-loss harvesting opportunities from current positions.                                  | READ-ONLY  |
+| 18 | `tax_check_wash_sales`     | Validate wash sale rule compliance across a 61-day window.                                         | READ-ONLY  |
+| 19 | `tax_lot_selection`        | Compare FIFO, LIFO, and specific lot identification strategies for a proposed sale.                | READ-ONLY  |
+| 20 | `tax_quarterly_estimate`   | Calculate quarterly estimated tax payments with safe harbor analysis.                              | READ-ONLY  |
+| 21 | `tax_compute_schedule_d`   | Compute Schedule D capital gain/loss netting, $3,000 loss cap, and carryover character.            | READ-ONLY  |
+| 22 | `tax_compute_state_tax`    | Compute state income tax for supported states (CA, NY, NJ, IL, PA, MA, TX, FL).                   | READ-ONLY  |
+| 23 | `tax_compute_amt`          | Compute Alternative Minimum Tax with exemption phaseout and two-tier rate structure.               | READ-ONLY  |
 
 ---
 
@@ -368,9 +381,363 @@ Parse Schedule K-1 data (partnership pass-through income, gains, deductions, gua
 
 ---
 
+### 6. `tax_parse_1040`
+
+Parse Form 1040 (main individual income tax return). Extracts income lines 1-9, adjustments, AGI, deductions, taxable income, total tax, payments, and balance due/refund.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### Input Schema
+
+```typescript
+{
+  userId: string
+  taxYear: number
+  rawData: object
+}
+```
+
+#### Output Schema
+
+```typescript
+{
+  parsed: Form1040
+  warnings: string[]
+  missingFields: string[]
+}
+```
+
+#### Form1040 Structure
+
+| Field                          | Type     | IRS Line | Description                                     |
+|--------------------------------|----------|----------|-------------------------------------------------|
+| `filingStatus`                 | `string` | Header   | Filing status (single, MFJ, MFS, HoH)          |
+| `taxYear`                      | `number` | Header   | Tax year                                        |
+| `firstName`                    | `string` | Header   | Taxpayer first name                             |
+| `lastName`                     | `string` | Header   | Taxpayer last name                              |
+| `ssn`                          | `string` | Header   | Social Security number                          |
+| `wages`                        | `number` | Line 1a  | Wages, salaries, tips                           |
+| `taxExemptInterest`            | `number` | Line 2a  | Tax-exempt interest                             |
+| `taxableInterest`              | `number` | Line 2b  | Taxable interest                                |
+| `qualifiedDividends`           | `number` | Line 3a  | Qualified dividends                             |
+| `ordinaryDividends`            | `number` | Line 3b  | Ordinary dividends                              |
+| `iraDistributions`             | `number` | Line 4a  | IRA distributions                               |
+| `taxableIraDistributions`      | `number` | Line 4b  | Taxable IRA distributions                       |
+| `pensions`                     | `number` | Line 5a  | Pensions and annuities                          |
+| `taxablePensions`              | `number` | Line 5b  | Taxable pensions                                |
+| `socialSecurity`               | `number` | Line 6a  | Social Security benefits                        |
+| `taxableSocialSecurity`        | `number` | Line 6b  | Taxable Social Security                         |
+| `capitalGainOrLoss`            | `number` | Line 7   | Capital gain or loss (from Schedule D)          |
+| `otherIncome`                  | `number` | Line 8   | Other income                                    |
+| `totalIncome`                  | `number` | Line 9   | Total income                                    |
+| `adjustmentsToIncome`          | `number` | Line 10  | Adjustments to income                           |
+| `adjustedGrossIncome`          | `number` | Line 11  | Adjusted gross income                           |
+| `standardOrItemizedDeduction`  | `number` | Line 12  | Standard or itemized deduction                  |
+| `qualifiedBusinessDeduction`   | `number` | Line 13  | Qualified business income deduction (Sec 199A)  |
+| `totalDeductions`              | `number` | Line 14  | Total deductions                                |
+| `taxableIncome`                | `number` | Line 15  | Taxable income                                  |
+| `totalTax`                     | `number` | Line 24  | Total tax                                       |
+| `totalPayments`                | `number` | Line 33  | Total payments                                  |
+| `amountOwed`                   | `number` | Line 37  | Amount owed                                     |
+| `overpaid`                     | `number` | Line 34  | Overpayment (refund)                            |
+
+---
+
+### 7. `tax_parse_schedule_a`
+
+Parse Schedule A (itemized deductions). Computes medical deduction threshold (7.5% of AGI), SALT cap ($10,000), and charitable contribution subtotals.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### Input Schema
+
+```typescript
+{
+  userId: string
+  taxYear: number
+  rawData: object   // Must include `agi` or `adjusted_gross_income` for threshold computation
+}
+```
+
+#### Output Schema
+
+```typescript
+{
+  parsed: ScheduleA
+  warnings: string[]
+  missingFields: string[]
+}
+```
+
+#### ScheduleA Structure
+
+| Field                          | Type     | IRS Line | Description                                     |
+|--------------------------------|----------|----------|-------------------------------------------------|
+| `taxYear`                      | `number` | —        | Tax year                                        |
+| `medicalAndDentalExpenses`     | `number` | Line 1   | Medical and dental expenses                     |
+| `medicalThreshold`             | `number` | Line 3   | 7.5% of AGI threshold                          |
+| `deductibleMedical`            | `number` | Line 4   | Deductible medical (excess over threshold)      |
+| `stateAndLocalTaxes`           | `number` | Line 5a-d| State and local taxes (pre-cap)                 |
+| `saltDeductionCapped`          | `number` | Line 5e  | SALT deduction (capped at $10,000)              |
+| `homeInterest`                 | `number` | Line 8   | Home mortgage interest                          |
+| `charitableCashContributions`  | `number` | Line 11  | Charitable cash contributions                   |
+| `charitableNonCash`            | `number` | Line 12  | Charitable non-cash contributions               |
+| `charitableCarryover`          | `number` | Line 13  | Charitable carryover from prior year            |
+| `totalCharitable`              | `number` | Line 14  | Total charitable contributions                  |
+| `casualtyAndTheftLosses`       | `number` | Line 15  | Casualty and theft losses                       |
+| `otherItemizedDeductions`      | `number` | Line 16  | Other itemized deductions                       |
+| `totalItemizedDeductions`      | `number` | Line 17  | Total itemized deductions                       |
+
+#### Validation Notes
+
+- SALT is automatically capped at $10,000 with a warning if the raw amount exceeds the cap
+- Charitable cash contributions exceeding 60% of AGI trigger a carryover warning
+- Medical deduction = max(0, expenses - 7.5% of AGI)
+
+---
+
+### 8. `tax_parse_schedule_b`
+
+Parse Schedule B (interest and ordinary dividends). Handles individual payor entries, computed totals, and foreign account (FBAR/FATCA) reporting.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### Input Schema
+
+```typescript
+{
+  userId: string
+  taxYear: number
+  rawData: object
+}
+```
+
+#### ScheduleB Structure
+
+| Field                      | Type              | Description                                       |
+|----------------------------|-------------------|---------------------------------------------------|
+| `taxYear`                  | `number`          | Tax year                                          |
+| `interestPayors`           | `Array<{name, amount}>` | Individual interest payor entries            |
+| `totalInterest`            | `number`          | Total interest (computed from payors or provided)  |
+| `dividendPayors`           | `Array<{name, amount}>` | Individual dividend payor entries            |
+| `totalOrdinaryDividends`   | `number`          | Total ordinary dividends                           |
+| `hasForeignAccountOrTrust` | `boolean`         | Part III — foreign account or trust indicator      |
+| `foreignCountries`         | `string[]`        | List of foreign countries                          |
+
+---
+
+### 9. `tax_parse_schedule_c`
+
+Parse Schedule C (profit or loss from business / self-employment). Computes gross profit, gross income, total expenses, and net profit/loss from 23 expense categories.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### ScheduleC Structure
+
+| Field                     | Type              | Description                                      |
+|---------------------------|-------------------|--------------------------------------------------|
+| `taxYear`                 | `number`          | Tax year                                         |
+| `businessName`            | `string`          | Business name                                    |
+| `principalBusinessCode`   | `string`          | NAICS code                                       |
+| `businessEin`             | `string`          | Business EIN                                     |
+| `accountingMethod`        | `string`          | `"cash"`, `"accrual"`, or `"other"`              |
+| `grossReceipts`           | `number`          | Gross receipts or sales                          |
+| `returnsAndAllowances`    | `number`          | Returns and allowances                           |
+| `costOfGoodsSold`         | `number`          | Cost of goods sold                               |
+| `grossProfit`             | `number`          | Computed: receipts - returns - COGS              |
+| `otherIncome`             | `number`          | Other income                                     |
+| `grossIncome`             | `number`          | Computed: grossProfit + otherIncome              |
+| `expenses`                | `ScheduleCExpenses` | 23 line-item expense categories                |
+| `totalExpenses`           | `number`          | Sum of all expenses                              |
+| `netProfitOrLoss`         | `number`          | Computed: grossIncome - totalExpenses            |
+
+#### ScheduleCExpenses Fields
+
+`advertising`, `carAndTruckExpenses`, `commissions`, `contractLabor`, `depletion`, `depreciation`, `employeeBenefits`, `insurance`, `interestMortgage`, `interestOther`, `legalAndProfessional`, `officeExpense`, `pensionAndProfitSharing`, `rentVehicles`, `rentOther`, `repairs`, `supplies`, `taxesAndLicenses`, `travel`, `meals`, `utilities`, `wages`, `otherExpenses`
+
+---
+
+### 10. `tax_parse_schedule_d`
+
+Parse Schedule D (capital gains and losses). Nets short-term and long-term components including Form 8949 data, Schedule K-1 pass-through, capital gain distributions, and loss carryovers. Determines tax computation method.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### ScheduleD Structure
+
+| Field                              | Type     | Description                                           |
+|------------------------------------|----------|-------------------------------------------------------|
+| `taxYear`                          | `number` | Tax year                                              |
+| `shortTermFromForm8949`            | `number` | Short-term gains/losses from Form 8949                |
+| `shortTermFromScheduleK1`          | `number` | Short-term gains/losses from Schedule K-1             |
+| `shortTermCapitalLossCarryover`    | `number` | Short-term capital loss carryover (negative)          |
+| `netShortTermGainLoss`             | `number` | Computed net short-term total                         |
+| `longTermFromForm8949`             | `number` | Long-term gains/losses from Form 8949                 |
+| `longTermFromScheduleK1`           | `number` | Long-term gains/losses from Schedule K-1              |
+| `longTermCapitalGainDistributions` | `number` | Long-term capital gain distributions                  |
+| `longTermCapitalLossCarryover`     | `number` | Long-term capital loss carryover (negative)           |
+| `netLongTermGainLoss`              | `number` | Computed net long-term total                          |
+| `netGainLoss`                      | `number` | Net of ST + LT                                       |
+| `qualifiesForExceptionToForm4952`  | `boolean`| Exception to investment interest limitation           |
+| `taxComputationMethod`             | `string` | `"regular"`, `"schedule_d_worksheet"`, or `"qualified_dividends_worksheet"` |
+
+#### Validation Notes
+
+- Net loss exceeding $3,000 triggers a carryover warning
+- Capital loss carryover presence triggers a prior-year verification warning
+- Tax computation method is automatically determined from net gains
+
+---
+
+### 11. `tax_parse_schedule_e`
+
+Parse Schedule E (supplemental income — rental/royalty income and partnership/S-Corp pass-through). Handles multiple rental properties and multiple partnership entities.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### ScheduleE Structure
+
+| Field                         | Type                     | Description                                  |
+|-------------------------------|--------------------------|----------------------------------------------|
+| `taxYear`                     | `number`                 | Tax year                                     |
+| `rentalProperties`            | `Array<ScheduleERental>` | Per-property rental income/expenses          |
+| `partnershipAndSCorpIncome`   | `Array<ScheduleEPartnership>` | Per-entity pass-through income          |
+| `totalRentalIncomeLoss`       | `number`                 | Sum of all rental net income/loss            |
+| `totalPartnershipIncomeLoss`  | `number`                 | Sum of all partnership net income/loss       |
+| `totalScheduleEIncomeLoss`    | `number`                 | Total Schedule E income/loss                 |
+
+#### ScheduleERental Fields
+
+`propertyAddress`, `propertyType`, `personalUseDays`, `fairRentalDays`, `rentsReceived`, `expenses` (15 categories: advertising, auto, cleaning, commissions, insurance, legal, management, mortgage, otherInterest, repairs, supplies, taxes, utilities, depreciation, other), `totalExpenses`, `netIncomeLoss`
+
+#### ScheduleEPartnership Fields
+
+`entityName`, `entityEin`, `isPassiveActivity`, `ordinaryIncomeLoss`, `netRentalIncomeLoss`, `otherIncomeLoss`
+
+---
+
+### 12. `tax_parse_schedule_se`
+
+Parse Schedule SE (self-employment tax). Computes Social Security tax, Medicare tax, additional Medicare tax (>$200K), total SE tax, and the deductible half. Uses 2025 wage base ($176,100) and 92.35% net earnings factor.
+
+**Risk Tier:** READ-ONLY (parsing + computation)
+
+#### ScheduleSE Structure
+
+| Field                              | Type     | Description                                      |
+|------------------------------------|----------|--------------------------------------------------|
+| `taxYear`                          | `number` | Tax year                                         |
+| `netEarningsFromSelfEmployment`    | `number` | Net SE earnings input                            |
+| `socialSecurityWageBase`           | `number` | SS wage base (default: $176,100 for 2025)        |
+| `socialSecurityTax`                | `number` | 12.4% on min(SE×92.35%, wage base)               |
+| `medicareTax`                      | `number` | 2.9% on SE×92.35%                                |
+| `additionalMedicareTax`            | `number` | 0.9% on SE earnings above $200,000               |
+| `totalSelfEmploymentTax`           | `number` | Sum of SS + Medicare + additional Medicare        |
+| `deductiblePartOfSeTax`            | `number` | 50% of total SE tax (above-the-line deduction)   |
+
+---
+
+### 13. `tax_parse_form_8949`
+
+Parse Form 8949 (sales and other dispositions of capital assets). Handles short-term Part I and long-term Part II transaction lists with per-transaction gain/loss computation and aggregate totals.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### Form8949 Structure
+
+| Field                          | Type                        | Description                               |
+|--------------------------------|-----------------------------|-------------------------------------------|
+| `taxYear`                      | `number`                    | Tax year                                  |
+| `shortTermPartI`               | `Array<Form8949Transaction>`| Short-term transactions                   |
+| `longTermPartII`               | `Array<Form8949Transaction>`| Long-term transactions                    |
+| `totalShortTermProceeds`       | `number`                    | Sum of short-term proceeds                |
+| `totalShortTermBasis`          | `number`                    | Sum of short-term cost basis              |
+| `totalShortTermAdjustments`    | `number`                    | Sum of short-term adjustments             |
+| `totalShortTermGainLoss`       | `number`                    | Sum of short-term gain/loss               |
+| `totalLongTermProceeds`        | `number`                    | Sum of long-term proceeds                 |
+| `totalLongTermBasis`           | `number`                    | Sum of long-term cost basis               |
+| `totalLongTermAdjustments`     | `number`                    | Sum of long-term adjustments              |
+| `totalLongTermGainLoss`        | `number`                    | Sum of long-term gain/loss                |
+
+#### Form8949Transaction Fields
+
+| Field              | Type              | Description                                    |
+|--------------------|-------------------|------------------------------------------------|
+| `description`      | `string`          | Description of property                        |
+| `dateAcquired`     | `string \| null`  | Date acquired (null if various/unknown)        |
+| `dateSold`         | `string`          | Date sold or disposed                          |
+| `proceeds`         | `number`          | Proceeds from sale                             |
+| `costBasis`        | `number`          | Cost or other basis                            |
+| `adjustmentCode`   | `string`          | Adjustment code (e.g., W for wash sale)        |
+| `adjustmentAmount` | `number`          | Adjustment amount                              |
+| `gainOrLoss`       | `number`          | Computed: proceeds - costBasis + adjustments   |
+
+---
+
+### 14. `tax_parse_state_return`
+
+Parse generic state return data. Supports any state form (CA 540, NY IT-201, etc.) with a uniform structure covering federal AGI carryover, state adjustments, state-specific deductions, computed state tax, credits, and balance due/overpayment.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### StateReturn Structure
+
+| Field                     | Type     | Description                                    |
+|---------------------------|----------|------------------------------------------------|
+| `taxYear`                 | `number` | Tax year                                       |
+| `stateCode`               | `string` | Two-letter state code (e.g., CA, NY)           |
+| `formId`                  | `string` | Form identifier (e.g., "540", "IT-201")        |
+| `filingStatus`            | `string` | Filing status                                  |
+| `federalAGI`              | `number` | Federal AGI carried from Form 1040             |
+| `stateAdditions`          | `number` | State additions to income                      |
+| `stateSubtractions`       | `number` | State subtractions from income                 |
+| `stateAGI`                | `number` | State adjusted gross income                    |
+| `stateDeductions`         | `number` | State deductions (standard or itemized)        |
+| `stateTaxableIncome`      | `number` | State taxable income                           |
+| `stateTaxComputed`        | `number` | Computed state tax                             |
+| `stateCredits`            | `number` | State tax credits                              |
+| `stateWithholding`        | `number` | State tax withheld                             |
+| `stateEstimatedPayments`  | `number` | State estimated payments made                  |
+| `stateBalanceDue`         | `number` | Computed: tax - credits - withholding - est    |
+| `stateOverpayment`        | `number` | Overpayment (refund)                           |
+
+---
+
+### 15. `tax_parse_form_6251`
+
+Parse Form 6251 (Alternative Minimum Tax — Individuals). Computes Alternative Minimum Taxable Income (AMTI) from Form 1040 taxable income plus AMT adjustments (SALT addback, private activity bond interest, ISO exercise, other). Reports exemption, phaseout, tentative minimum tax, and actual AMT.
+
+**Risk Tier:** READ-ONLY (parsing)
+
+#### Form6251 Structure
+
+| Field                               | Type     | Description                                          |
+|-------------------------------------|----------|------------------------------------------------------|
+| `taxYear`                           | `number` | Tax year                                             |
+| `taxableIncomeFromForm1040`         | `number` | Taxable income from Form 1040 Line 15                |
+| `stateAndLocalTaxDeduction`         | `number` | SALT deduction addback                               |
+| `taxExemptInterest`                 | `number` | Tax-exempt interest from private activity bonds      |
+| `incentiveStockOptions`             | `number` | ISO bargain element                                  |
+| `otherAdjustments`                  | `number` | Other AMT adjustments                                |
+| `alternativeMinimumTaxableIncome`   | `number` | Computed AMTI                                        |
+| `exemptionAmount`                   | `number` | AMT exemption amount                                 |
+| `amtExemptionPhaseout`              | `number` | Phaseout amount                                      |
+| `reducedExemption`                  | `number` | Exemption after phaseout reduction                   |
+| `amtTaxableAmount`                  | `number` | AMTI minus reduced exemption                         |
+| `tentativeMinimumTax`               | `number` | Tentative minimum tax (26%/28% rates)                |
+| `regularTax`                        | `number` | Regular tax from Form 1040                           |
+| `alternativeMinimumTax`             | `number` | Computed: max(0, TMT - regularTax)                   |
+
+#### Validation Notes
+
+- ISO exercise triggers a warning about AMT credit carryforward eligibility
+- Non-zero AMT triggers a planning strategies advisory warning
+
+---
+
 ## Calculator Tool Details
 
-### 6. `tax_estimate_liability`
+### 16. `tax_estimate_liability` (original tool #6)
 
 Calculate estimated federal and state tax liability using progressive brackets. Includes ordinary tax, long-term capital gains / qualified dividend tax, net investment income tax (NIIT), and self-employment tax. All calculations are deterministic.
 
@@ -437,7 +804,7 @@ Calculate estimated federal and state tax liability using progressive brackets. 
 
 ---
 
-### 7. `tax_find_tlh_candidates`
+### 17. `tax_find_tlh_candidates`
 
 Identify tax-loss harvesting opportunities from current positions. Ranks candidates by estimated tax savings and flags wash sale risks. All loss calculations are deterministic.
 
@@ -496,7 +863,7 @@ Array<{
 
 ---
 
-### 8. `tax_check_wash_sales`
+### 18. `tax_check_wash_sales`
 
 Validate wash sale rule compliance. Checks the 61-day window (30 days before the sale, the sale date, and 30 days after the sale) for purchases of substantially identical securities. Returns violations with disallowed loss amounts.
 
@@ -552,7 +919,7 @@ Validate wash sale rule compliance. Checks the 61-day window (30 days before the
 
 ---
 
-### 9. `tax_lot_selection`
+### 19. `tax_lot_selection`
 
 Compare FIFO, LIFO, and specific lot identification strategies for a proposed sale. Shows gain/loss breakdown and estimated tax impact for each method.
 
@@ -605,7 +972,7 @@ Array<{
 
 ---
 
-### 10. `tax_quarterly_estimate`
+### 20. `tax_quarterly_estimate`
 
 Calculate quarterly estimated tax payments with safe harbor analysis. Determines payment schedule, underpayment risk, and suggested next payment amount.
 
@@ -672,6 +1039,157 @@ The tool evaluates safe harbor compliance using IRS guidelines:
 
 ---
 
+### 21. `tax_compute_schedule_d`
+
+Compute Schedule D capital gain/loss netting with $3,000 annual loss deduction cap ($1,500 for MFS), character-preserving carryover (short-term vs long-term), and preferential rate qualification. All math uses `decimal.ts` for deterministic arithmetic.
+
+**Risk Tier:** READ-ONLY (computation)
+
+#### Input Schema
+
+```typescript
+{
+  shortTermGainLoss: number          // Net short-term gains/losses from current year
+  longTermGainLoss: number           // Net long-term gains/losses from current year
+  capitalLossCarryover: {
+    shortTerm: number                // ST carryover from prior year (negative)
+    longTerm: number                 // LT carryover from prior year (negative)
+  }
+  capitalGainDistributions: number   // Long-term capital gain distributions
+  filingStatus?: FilingStatus        // Optional — affects $3K/$1.5K cap
+}
+```
+
+#### Output Schema
+
+```typescript
+{
+  netShortTermGainLoss: number       // Net ST after carryover
+  netLongTermGainLoss: number        // Net LT after carryover + distributions
+  netCapitalGainLoss: number         // Combined net
+  capitalLossDeduction: number       // Capped at $3,000 ($1,500 MFS)
+  carryoverToNextYear: {
+    shortTerm: number                // ST loss carryforward (preserves character)
+    longTerm: number                 // LT loss carryforward (preserves character)
+  }
+  qualifiesForPreferentialRates: boolean  // True if net LT > 0
+}
+```
+
+#### Computation Logic
+
+1. Net ST = currentShortTerm + STcarryover
+2. Net LT = currentLongTerm + LTcarryover + capitalGainDistributions
+3. Net total = Net ST + Net LT
+4. If net total < 0: deduction = min(|net total|, $3,000) — $1,500 for MFS
+5. Carryover absorbs deduction against ST first, then LT (preserving character)
+6. Preferential rates apply when Net LT > 0
+
+---
+
+### 22. `tax_compute_state_tax`
+
+Compute state income tax for supported states using progressive brackets (CA, NY, NJ), flat rates (IL 4.95%, PA 3.07%), flat + surtax (MA 5% + 4% millionaire's tax), or zero-tax states (TX, FL). Uses 2025 bracket tables with MFJ scaling. All math uses `decimal.ts`.
+
+**Risk Tier:** READ-ONLY (computation)
+
+#### Input Schema
+
+```typescript
+{
+  stateCode: string                  // Two-letter state code (CA, NY, NJ, IL, PA, MA, TX, FL)
+  taxableIncome: number              // State taxable income
+  filingStatus: FilingStatus         // Affects bracket thresholds for CA, NY, NJ
+}
+```
+
+#### Output Schema
+
+```typescript
+{
+  stateCode: string
+  taxableIncome: number
+  stateTax: number                   // Computed state tax
+  effectiveRate: number              // stateTax / taxableIncome
+  marginalRate: number               // Top marginal bracket rate
+  brackets: Array<{
+    min: number
+    max: number | null
+    rate: number
+  }>
+  notes: string[]                    // Special notes (e.g., "CA Mental Health Services Tax")
+}
+```
+
+#### Supported States
+
+| State | Type        | Rate Range         | Notes                                      |
+|-------|-------------|--------------------|--------------------------------------------|
+| CA    | Progressive | 1% – 13.3%        | 10 brackets; Mental Health Services Tax >$1M|
+| NY    | Progressive | 4% – 10.9%        | 9 brackets; single and MFJ tables          |
+| NJ    | Progressive | 1.4% – 10.75%     | 7 brackets; single and MFJ tables          |
+| IL    | Flat        | 4.95%              | Flat rate                                  |
+| PA    | Flat        | 3.07%              | Flat rate                                  |
+| MA    | Flat+Surtax | 5% + 4% over $1M  | Millionaire's surtax                       |
+| TX    | None        | 0%                 | No state income tax                        |
+| FL    | None        | 0%                 | No state income tax                        |
+
+---
+
+### 23. `tax_compute_amt`
+
+Compute Alternative Minimum Tax using 2025 parameters. Handles AMTI calculation from Form 1040 taxable income plus AMT adjustments, exemption phaseout at 25% rate, and two-tier AMT rate structure (26% on first $248,300, 28% above).
+
+**Risk Tier:** READ-ONLY (computation)
+
+#### Input Schema
+
+```typescript
+{
+  taxableIncome: number              // Form 1040 Line 15 taxable income
+  filingStatus: FilingStatus         // Determines exemption and phaseout thresholds
+  stateAndLocalTaxDeduction: number  // SALT deduction added back for AMT
+  taxExemptInterestFromPABs: number  // Private activity bond interest
+  incentiveStockOptionBargainElement: number  // ISO exercise bargain element
+  otherAdjustments: number           // Other AMT preference items
+  regularTax: number                 // Regular tax from Form 1040
+}
+```
+
+#### Output Schema
+
+```typescript
+{
+  amti: number                       // Alternative Minimum Taxable Income
+  exemptionAmount: number            // Base exemption for filing status
+  exemptionPhaseoutStart: number     // AMTI threshold where phaseout begins
+  reducedExemption: number           // Exemption after phaseout (min: 0)
+  amtBase: number                    // max(0, AMTI - reducedExemption)
+  tentativeMinimumTax: number        // 26%/28% two-tier tax on amtBase
+  alternativeMinimumTax: number      // max(0, TMT - regularTax)
+  isSubjectToAmt: boolean            // True if AMT > 0
+}
+```
+
+#### 2025 AMT Parameters
+
+| Filing Status | Exemption   | Phaseout Start | Bracket Threshold |
+|---------------|-------------|----------------|-------------------|
+| Single        | $88,100     | $609,350       | $248,300          |
+| HoH           | $88,100     | $609,350       | $248,300          |
+| MFJ           | $137,000    | $1,218,700     | $248,300          |
+| MFS           | $68,500     | $609,350       | $124,150          |
+
+#### Computation Logic
+
+1. AMTI = taxableIncome + SALT addback + PAB interest + ISO bargain + other
+2. Exemption phaseout: reduced = max(0, exemption - 25% × max(0, AMTI - phaseoutStart))
+3. AMT base = max(0, AMTI - reducedExemption)
+4. TMT = 26% × min(base, threshold) + 28% × max(0, base - threshold)
+5. AMT = max(0, TMT - regularTax)
+
+---
+
 ## Tax Form Field Mappings
 
 Quick reference mapping IRS box numbers to canonical field names used across parser tools.
@@ -735,6 +1253,77 @@ Quick reference mapping IRS box numbers to canonical field names used across par
 | Section 1231 gain/loss       | `section1231GainLoss`              | Net Section 1231 gain (loss)       |
 | Self-employment earnings     | `selfEmploymentEarnings`           | Net SE earnings                    |
 
+### Form 1040
+
+| IRS Line | Canonical Field                    | Description                              |
+|----------|------------------------------------|------------------------------------------|
+| Line 1a  | `wages`                            | Wages, salaries, tips                    |
+| Line 2a  | `taxExemptInterest`                | Tax-exempt interest                      |
+| Line 2b  | `taxableInterest`                  | Taxable interest                         |
+| Line 3a  | `qualifiedDividends`               | Qualified dividends                      |
+| Line 3b  | `ordinaryDividends`                | Ordinary dividends                       |
+| Line 7   | `capitalGainOrLoss`                | Capital gain or loss                     |
+| Line 9   | `totalIncome`                      | Total income                             |
+| Line 11  | `adjustedGrossIncome`              | Adjusted gross income                    |
+| Line 15  | `taxableIncome`                    | Taxable income                           |
+| Line 24  | `totalTax`                         | Total tax                                |
+| Line 33  | `totalPayments`                    | Total payments                           |
+
+### Schedule A
+
+| IRS Line | Canonical Field                    | Description                              |
+|----------|------------------------------------|------------------------------------------|
+| Line 1   | `medicalAndDentalExpenses`         | Medical and dental expenses              |
+| Line 5   | `stateAndLocalTaxes`               | State and local taxes (pre-cap)          |
+| Line 5e  | `saltDeductionCapped`              | SALT deduction (capped at $10,000)       |
+| Line 8   | `homeInterest`                     | Home mortgage interest                   |
+| Line 11  | `charitableCashContributions`      | Charitable cash contributions            |
+| Line 17  | `totalItemizedDeductions`          | Total itemized deductions                |
+
+### Schedule C
+
+| IRS Line | Canonical Field                    | Description                              |
+|----------|------------------------------------|------------------------------------------|
+| Line 1   | `grossReceipts`                    | Gross receipts or sales                  |
+| Line 7   | `grossProfit`                      | Gross profit                             |
+| Line 28  | `totalExpenses`                    | Total expenses                           |
+| Line 31  | `netProfitOrLoss`                  | Net profit or loss                       |
+
+### Schedule D
+
+| IRS Line | Canonical Field                    | Description                              |
+|----------|------------------------------------|------------------------------------------|
+| Part I   | `shortTermFromForm8949`            | Short-term from Form 8949               |
+| Part I   | `netShortTermGainLoss`             | Net short-term gain/loss                 |
+| Part II  | `longTermFromForm8949`             | Long-term from Form 8949                |
+| Part II  | `netLongTermGainLoss`              | Net long-term gain/loss                  |
+| Line 16  | `netGainLoss`                      | Combination of ST and LT                 |
+
+### Form 8949
+
+| Column   | Canonical Field                    | Description                              |
+|----------|------------------------------------|------------------------------------------|
+| (a)      | `description`                      | Description of property                  |
+| (b)      | `dateAcquired`                     | Date acquired                            |
+| (c)      | `dateSold`                         | Date sold                                |
+| (d)      | `proceeds`                         | Proceeds                                 |
+| (e)      | `costBasis`                        | Cost or other basis                      |
+| (f)      | `adjustmentCode`                   | Code (e.g., W for wash sale)             |
+| (g)      | `adjustmentAmount`                 | Adjustment amount                        |
+| (h)      | `gainOrLoss`                       | Gain or loss                             |
+
+### Form 6251
+
+| IRS Line | Canonical Field                    | Description                              |
+|----------|------------------------------------|------------------------------------------|
+| Line 1   | `taxableIncomeFromForm1040`        | Taxable income from Form 1040            |
+| Line 2a  | `stateAndLocalTaxDeduction`        | SALT deduction addback                   |
+| Line 2g  | `taxExemptInterest`                | Private activity bond interest           |
+| Line 2i  | `incentiveStockOptions`            | ISO bargain element                      |
+| Line 7   | `alternativeMinimumTaxableIncome`  | AMTI                                     |
+| Line 9   | `tentativeMinimumTax`              | Tentative minimum tax                    |
+| Line 11  | `alternativeMinimumTax`            | AMT (TMT minus regular tax)              |
+
 ---
 
 ## Calculator Notes
@@ -749,10 +1338,10 @@ Calculator tools document their assumptions in the output `assumptions` array. C
 
 - **Standard deduction assumed** unless a specific deduction amount is provided
 - **Single state of residence** -- multi-state apportionment is not supported in v0.1.0
-- **No AMT calculation** -- Alternative Minimum Tax is not computed in this version
+- **AMT supported via `tax_compute_amt`** -- uses 2025 parameters with exemption phaseout and 26%/28% two-tier rates
 - **No credits beyond foreign tax credit** -- child tax credit, education credits, etc. are not included
 - **Federal bracket rates are sourced from IRS Revenue Procedures** for the specified tax year
-- **State tax calculations use simplified flat or progressive brackets** (full state-specific deduction and credit logic varies by state)
+- **State tax supported for 8 states** via `tax_compute_state_tax` -- CA, NY, NJ (progressive), IL, PA (flat), MA (flat+surtax), TX, FL (none). Full state-specific deduction and credit logic varies by state.
 - **NIIT threshold is $200,000 (single) / $250,000 (MFJ)** per IRC Section 1411
 - **Self-employment tax uses 92.35% of SE earnings** with Social Security wage base cap for the tax year
 
@@ -767,21 +1356,51 @@ Calculator tools document their assumptions in the output `assumptions` array. C
 
 ## Usage Notes
 
-### Typical Workflow
+### Typical Workflows
 
-The standard tax analysis workflow follows this sequence:
+#### Full Tax Return Analysis
 
-1. **Parse tax documents** -- Use parser tools (`tax_parse_1099b`, `tax_parse_1099div`, `tax_parse_1099int`, `tax_parse_w2`, `tax_parse_k1`) to normalize raw form data into structured objects. Review `warnings` and `missingFields` in each output.
+Parse a complete set of tax documents in sequence:
 
-2. **Estimate tax liability** -- Feed parsed data into `tax_estimate_liability` to compute projected federal and state tax. Review `assumptions` and `balanceDue`.
+1. **Parse income sources** -- `tax_parse_w2`, `tax_parse_1099int`, `tax_parse_1099div`, `tax_parse_k1`, `tax_parse_schedule_c`
+2. **Parse capital transactions** -- `tax_parse_1099b` → `tax_parse_form_8949` → `tax_parse_schedule_d`
+3. **Compute capital gains netting** -- `tax_compute_schedule_d` for loss cap and carryover
+4. **Parse deductions and credits** -- `tax_parse_schedule_a`, `tax_parse_schedule_b`, `tax_parse_schedule_e`
+5. **Parse main return** -- `tax_parse_1040` to verify everything ties together
+6. **Compute SE tax** -- `tax_parse_schedule_se` (if self-employment income present)
+7. **Estimate liability** -- `tax_estimate_liability` for federal + state projection
+8. **Check AMT exposure** -- `tax_compute_amt` with SALT addback and ISO data
+9. **Compute state tax** -- `tax_compute_state_tax` for detailed state liability
+10. **Parse state return** -- `tax_parse_state_return` to verify state filing data
+11. **Check AMT form data** -- `tax_parse_form_6251` to verify AMT computations
 
-3. **Find TLH opportunities** -- Use `tax_find_tlh_candidates` with current positions (from `alpaca-trading` or `ibkr-portfolio`) to identify harvesting candidates ranked by estimated tax savings.
+#### Tax Planning & Strategy
 
-4. **Check wash sale compliance** -- Before executing any TLH sale, run `tax_check_wash_sales` with the proposed sales and recent purchase history to verify no wash sale violations would occur.
+1. **Find TLH opportunities** -- `tax_find_tlh_candidates` with current positions (from `alpaca-trading` or `ibkr-portfolio`)
+2. **Check wash sale compliance** -- `tax_check_wash_sales` with proposed sales and recent purchase history
+3. **Compare lot selection** -- `tax_lot_selection` to compare FIFO, LIFO, and specific identification
+4. **Calculate quarterly estimates** -- `tax_quarterly_estimate` for payment schedule and safe harbor status
 
-5. **Compare lot selection strategies** -- Use `tax_lot_selection` to compare FIFO, LIFO, and specific identification for any proposed sale, selecting the method with the best after-tax outcome.
+#### Self-Employment Tax Analysis
 
-6. **Calculate quarterly estimates** -- Use `tax_quarterly_estimate` to determine payment schedule, safe harbor status, and suggested next payment amount.
+```
+tax_parse_schedule_c(rawData)
+  → tax_parse_schedule_se(rawData)
+  → tax_estimate_liability(income with businessIncome)
+  → tax_quarterly_estimate(projectedIncome)
+```
+
+#### AMT Planning
+
+```
+tax_compute_amt({
+  taxableIncome, filingStatus,
+  stateAndLocalTaxDeduction: scheduleA.saltDeductionCapped,
+  incentiveStockOptionBargainElement: <ISO data>,
+  regularTax: estimatedLiability.ordinaryTax
+})
+  → If AMT > 0: review ISO exercise timing, SALT impact
+```
 
 ### Integration with Other Extensions
 

@@ -31,7 +31,6 @@
         "type": "number",
         "description": "Maximum single order notional value safety limit"
       }
-    },
-    "required": ["apiKeyEnv", "apiSecretEnv", "env"]
+    }
   }
 }

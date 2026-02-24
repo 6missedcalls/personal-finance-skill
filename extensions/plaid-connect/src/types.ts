@@ -286,6 +286,15 @@ export interface PlaidToolError {
   readonly requestId: string | null
 }
 
+export function isPlaidToolError(value: unknown): value is PlaidToolError {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as PlaidToolError).error === true &&
+    typeof (value as PlaidToolError).errorMessage === 'string'
+  )
+}
+
 export function formatPlaidError(err: unknown): PlaidToolError {
   const error = err as {
     response?: {

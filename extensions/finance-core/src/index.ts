@@ -1,6 +1,9 @@
 import { homedir } from "os"
 import { join } from "path"
 
+import type { OpenClawPluginApi } from "openclaw/plugin-sdk"
+import { emptyPluginConfigSchema } from "openclaw/plugin-sdk"
+
 import { FinanceStore } from "./storage/store.js"
 import {
   upsertSnapshotTool,
@@ -14,74 +17,79 @@ import {
   policyCheckTool,
 } from "./tools/index.js"
 
-// --- Extension Configuration ---
+// --- Tool Adapter ---
 
-interface FinanceCoreConfig {
-  readonly storageDir?: string
-  readonly defaultUserId?: string
-  readonly anomalyThresholds?: {
-    readonly largeTransactionMultiple?: number
-    readonly balanceDropPercent?: number
-  }
-  readonly policyRulesPath?: string
-}
-
-// --- Tool Definition Type ---
-
-interface ToolDefinition {
+interface LegacyToolMeta {
   readonly name: string
   readonly description: string
   readonly input_schema: Record<string, unknown>
-  readonly handler: (input: Record<string, unknown>) => Promise<unknown>
 }
 
-// --- Extension Entry Point ---
-
-export function createFinanceCoreExtension(config: FinanceCoreConfig = {}): ReadonlyArray<ToolDefinition> {
-  const storageDir = config.storageDir ?? join(homedir(), ".openclaw", "finance-data")
-  const store = new FinanceStore(storageDir)
-
-  const tools: ReadonlyArray<ToolDefinition> = [
-    {
-      ...upsertSnapshotTool,
-      handler: upsertSnapshotTool.createHandler(store) as ToolDefinition["handler"],
+function wrapTool(
+  meta: LegacyToolMeta,
+  handler: (input: any) => Promise<unknown>,
+) {
+  return {
+    name: meta.name,
+    label: meta.name,
+    description: meta.description,
+    parameters: meta.input_schema,
+    async execute(_toolCallId: string, params: unknown) {
+      const result = await handler(params)
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+        details: result,
+      }
     },
-    {
-      ...getStateTool,
-      handler: getStateTool.createHandler(store) as ToolDefinition["handler"],
-    },
-    {
-      ...getTransactionsTool,
-      handler: getTransactionsTool.createHandler(store) as ToolDefinition["handler"],
-    },
-    {
-      ...getNetWorthTool,
-      handler: getNetWorthTool.createHandler(store) as ToolDefinition["handler"],
-    },
-    {
-      ...detectAnomaliesTool,
-      handler: detectAnomaliesTool.createHandler(store, config.anomalyThresholds) as ToolDefinition["handler"],
-    },
-    {
-      ...cashFlowSummaryTool,
-      handler: cashFlowSummaryTool.createHandler(store) as ToolDefinition["handler"],
-    },
-    {
-      ...subscriptionTrackerTool,
-      handler: subscriptionTrackerTool.createHandler(store) as ToolDefinition["handler"],
-    },
-    {
-      ...generateBriefTool,
-      handler: generateBriefTool.createHandler(store) as ToolDefinition["handler"],
-    },
-    {
-      ...policyCheckTool,
-      handler: policyCheckTool.createHandler(store) as ToolDefinition["handler"],
-    },
-  ]
-
-  return tools
+  }
 }
+
+// --- Plugin Definition ---
+
+const plugin: { id: string; name: string; description: string; configSchema: any; register: (api: OpenClawPluginApi) => void } = {
+  id: "finance-core",
+  name: "Finance Core",
+  description:
+    "Canonical financial data layer — normalized models, storage, policy checks, anomaly detection, and briefing generation",
+  configSchema: emptyPluginConfigSchema(),
+
+  register(api: OpenClawPluginApi) {
+    const cfg = (api.pluginConfig ?? {}) as Record<string, unknown>
+    const storageDir =
+      (cfg.storageDir as string | undefined) ?? join(homedir(), ".openclaw", "finance-data")
+    const anomalyThresholds = cfg.anomalyThresholds as
+      | { readonly largeTransactionMultiple?: number; readonly balanceDropPercent?: number }
+      | undefined
+
+    const store = new FinanceStore(storageDir)
+
+    const toolMetas: ReadonlyArray<LegacyToolMeta> = [
+      upsertSnapshotTool, getStateTool, getTransactionsTool, getNetWorthTool,
+      detectAnomaliesTool, cashFlowSummaryTool, subscriptionTrackerTool,
+      generateBriefTool, policyCheckTool,
+    ]
+
+    const handlers: ReadonlyArray<(input: any) => Promise<unknown>> = [
+      upsertSnapshotTool.createHandler(store),
+      getStateTool.createHandler(store),
+      getTransactionsTool.createHandler(store),
+      getNetWorthTool.createHandler(store),
+      detectAnomaliesTool.createHandler(store, anomalyThresholds),
+      cashFlowSummaryTool.createHandler(store),
+      subscriptionTrackerTool.createHandler(store),
+      generateBriefTool.createHandler(store),
+      policyCheckTool.createHandler(store),
+    ]
+
+    const tools = toolMetas.map((meta, i) => wrapTool(meta, handlers[i]))
+
+    for (const tool of tools) {
+      api.registerTool(tool as any)
+    }
+  },
+}
+
+export default plugin
 
 // --- Re-exports for consumer extensions ---
 

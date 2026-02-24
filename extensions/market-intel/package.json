@@ -1,0 +1,22 @@
+{
+  "name": "@personal-finance/market-intel",
+  "version": "0.1.0",
+  "description": "Market intelligence via Finnhub, SEC EDGAR, FRED, BLS, and Alpha Vantage for OpenClaw",
+  "private": true,
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0",
+    "@vitest/coverage-v8": "^2.0.0"
+  }
+}

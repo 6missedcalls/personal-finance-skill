@@ -1,6 +1,7 @@
 {
   "name": "@personal-finance/ibkr-portfolio",
   "version": "0.1.0",
+  "description": "Interactive Brokers Client Portal integration for portfolio, positions, allocation, performance, and market data",
   "private": true,
   "type": "module",
   "openclaw": {

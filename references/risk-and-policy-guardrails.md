@@ -191,6 +191,17 @@ The `env` field in the configuration determines which environment is active. The
 
 The `alpaca_create_order` tool includes a `confirm: boolean` field that must be explicitly set to `true` to submit any order. This is a code-level safety gate independent of the policy engine.
 
+### Read-Only Extensions (No Policy Gates Required)
+
+The following extensions are entirely read-only and do not modify external state. They do not require policy checks before invocation:
+
+| Extension | Description |
+|-----------|-------------|
+| `market-intel` | Fetches company news, SEC filings, economic data (FRED, BLS), analyst recommendations, and news sentiment. All 10 tools are GET-only against public data APIs. |
+| `social-sentiment` | Fetches social media sentiment from StockTwits, X/Twitter, and Quiver Quantitative. All 6 tools are GET-only. |
+
+These extensions may return data that informs side-effecting decisions (e.g., a trade based on sentiment analysis), but the policy check applies to the downstream action, not to the data retrieval itself.
+
 ---
 
 ## Non-Negotiable Hard Rules
@@ -215,7 +226,7 @@ Tax calculations, profit/loss figures, portfolio drift percentages, and all othe
 
 ### 5. Tax calculations are deterministic only
 
-Tax liability estimates, capital gains computations, wash sale adjustments, and withholding gap analysis must all flow through the `tax-strategy` extension tools. The agent must not estimate tax numbers through natural language reasoning.
+Tax liability estimates, capital gains computations, wash sale adjustments, AMT calculations, state tax computations, and withholding gap analysis must all flow through the `tax-engine` extension tools. The agent must not estimate tax numbers through natural language reasoning.
 
 ### 6. Recommendations must include assumptions and citations
 
@@ -289,3 +300,6 @@ Different action types require different disclaimers attached to the agent's res
 | `extensions/finance-core/src/tools/policy-check.ts` | Policy engine implementation                                |
 | `extensions/alpaca-trading/src/config.ts` | Alpaca safety limit configuration (`maxOrderQty`, `maxOrderNotional`) |
 | `extensions/alpaca-trading/src/tools/create-order.ts` | Order confirmation gate and limit enforcement            |
+| `references/ext-market-intel.md`              | Market intelligence tools (read-only, no policy gates)          |
+| `references/ext-social-sentiment.md`          | Social sentiment tools (read-only, no policy gates)             |
+| `references/ext-tax-engine.md`                | Tax engine tools (23 tools: 15 parsers + 8 calculators)        |

@@ -2,8 +2,9 @@
 # ──────────────────────────────────────────────────────────────
 # personal-finance-skill — Onboard Script
 #
-# Builds all 5 extensions, registers them as OpenClaw plugins
-# (dev-linked), and installs the skill into ~/.openclaw/skills/.
+# Builds all 7 extensions, registers them as OpenClaw plugins
+# (dev-linked with provenance), writes required config defaults,
+# adds to allowlist, and installs the skill.
 #
 # Usage:
 #   ./scripts/onboard.sh            # default: dev-link mode
@@ -16,12 +17,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
 EXTENSIONS_DIR="$SKILL_ROOT/extensions"
 
-# OpenClaw standard paths (from docs.openclaw.ai)
+# OpenClaw standard paths
 OPENCLAW_EXT_DIR="${HOME}/.openclaw/extensions"
 OPENCLAW_SKILLS_DIR="${HOME}/.openclaw/skills"
+OPENCLAW_CONFIG="${HOME}/.openclaw/openclaw.json"
 SKILL_NAME="personal-finance-skill"
 
-EXTENSIONS=(finance-core plaid-connect alpaca-trading ibkr-portfolio tax-engine)
+# Install order: foundation first, then adapters, then intelligence
+EXTENSIONS=(finance-core plaid-connect alpaca-trading ibkr-portfolio tax-engine market-intel social-sentiment)
 
 MODE="link"
 if [[ "${1:-}" == "--copy" ]]; then
@@ -47,7 +50,7 @@ print_header() {
   echo ""
   echo "  personal-finance-skill"
   echo "  ======================"
-  echo "  46 tools | 5 extensions | Agent Skills Protocol"
+  echo "  75 tools | 7 extensions | Agent Skills Protocol"
   echo ""
 }
 
@@ -66,7 +69,6 @@ if [[ "$MODE" == "uninstall" ]]; then
       fi
     done
   else
-    # Manual removal
     for ext in "${EXTENSIONS[@]}"; do
       target="$OPENCLAW_EXT_DIR/$ext"
       if [[ -L "$target" || -d "$target" ]]; then
@@ -76,7 +78,6 @@ if [[ "$MODE" == "uninstall" ]]; then
     done
   fi
 
-  # Remove skill symlink
   skill_target="$OPENCLAW_SKILLS_DIR/$SKILL_NAME"
   if [[ -L "$skill_target" || -d "$skill_target" ]]; then
     rm -rf "$skill_target"
@@ -89,9 +90,16 @@ if [[ "$MODE" == "uninstall" ]]; then
   exit 0
 fi
 
-# ── Main Install ─────────────────────────────────────────────
+# ── Preflight ────────────────────────────────────────────────
 
 print_header
+
+if ! has_cmd openclaw; then
+  echo "  ERROR: openclaw CLI not found in PATH."
+  echo "  Install: npm install -g openclaw@latest"
+  echo "  Then re-run this script."
+  exit 1
+fi
 
 PM=$(detect_pm)
 echo "  Package manager: $PM"
@@ -100,7 +108,7 @@ echo ""
 
 # ── Step 1: Install deps & build ─────────────────────────────
 
-echo "  [1/3] Building extensions"
+echo "  [1/4] Building extensions"
 echo "  -------------------------"
 
 for ext in "${EXTENSIONS[@]}"; do
@@ -113,14 +121,12 @@ for ext in "${EXTENSIONS[@]}"; do
 
   printf "    %-20s" "$ext"
 
-  # Install production dependencies
   (
     cd "$ext_dir"
     if [[ ! -d "node_modules" ]]; then
       $PM install --silent 2>/dev/null || $PM install 2>/dev/null
     fi
 
-    # Build if script exists
     if grep -q '"build"' package.json 2>/dev/null; then
       $PM run build >/dev/null 2>&1 || true
     fi
@@ -131,180 +137,100 @@ done
 
 echo ""
 
-# ── Step 2: Register as OpenClaw plugins ─────────────────────
+# ── Step 2: Register plugins with provenance ─────────────────
 
-echo "  [2/3] Registering plugins"
+echo "  [2/4] Registering plugins"
 echo "  -------------------------"
 
-if has_cmd openclaw; then
-  # Use the official CLI
-  for ext in "${EXTENSIONS[@]}"; do
-    ext_dir="$EXTENSIONS_DIR/$ext"
-    if [[ ! -f "$ext_dir/openclaw.plugin.json" ]]; then
-      echo "    SKIP  $ext (no manifest)"
-      continue
-    fi
+for ext in "${EXTENSIONS[@]}"; do
+  ext_dir="$EXTENSIONS_DIR/$ext"
+  if [[ ! -f "$ext_dir/openclaw.plugin.json" ]]; then
+    echo "    SKIP  $ext (no manifest)"
+    continue
+  fi
 
-    printf "    %-20s" "$ext"
+  printf "    %-20s" "$ext"
 
-    if [[ "$MODE" == "link" ]]; then
-      # Dev-link: symlink, no copy. Adds to plugins.load.paths
-      openclaw plugins install -l "$ext_dir" 2>/dev/null && echo "linked" || {
-        # Fallback if already installed
-        if openclaw plugins info "$ext" &>/dev/null 2>&1; then
-          echo "already registered"
-        else
-          echo "FAILED (try manual)"
-        fi
-      }
-    else
-      # Copy mode: copies into ~/.openclaw/extensions/<id>/
-      openclaw plugins install "$ext_dir" 2>/dev/null && echo "copied" || {
-        if openclaw plugins info "$ext" &>/dev/null 2>&1; then
-          echo "already registered"
-        else
-          echo "FAILED (try manual)"
-        fi
-      }
-    fi
-  done
-else
-  # Fallback: manual symlink to ~/.openclaw/extensions/
-  echo "    (openclaw CLI not found, using manual symlinks)"
-  echo ""
-  mkdir -p "$OPENCLAW_EXT_DIR"
+  # Check if already installed with provenance
+  if openclaw plugins info "$ext" &>/dev/null 2>&1; then
+    echo "already registered"
+    continue
+  fi
 
-  for ext in "${EXTENSIONS[@]}"; do
-    ext_dir="$EXTENSIONS_DIR/$ext"
-    target="$OPENCLAW_EXT_DIR/$ext"
-
-    if [[ ! -f "$ext_dir/openclaw.plugin.json" ]]; then
-      echo "    SKIP  $ext (no manifest)"
-      continue
-    fi
-
-    printf "    %-20s" "$ext"
-
-    if [[ -L "$target" ]]; then
-      existing_src="$(readlink "$target")"
-      if [[ "$existing_src" == "$ext_dir" ]]; then
-        echo "already linked"
-      else
-        echo "linked (other: $existing_src)"
-      fi
-    elif [[ -e "$target" ]]; then
-      echo "EXISTS (not a symlink, skipping)"
-    else
-      if [[ "$MODE" == "link" ]]; then
-        ln -s "$ext_dir" "$target"
-        echo "linked"
-      else
-        cp -R "$ext_dir" "$target"
-        echo "copied"
-      fi
-    fi
-  done
-fi
+  if [[ "$MODE" == "link" ]]; then
+    openclaw plugins install -l "$ext_dir" 2>/dev/null && echo "linked" || echo "FAILED"
+  else
+    openclaw plugins install "$ext_dir" 2>/dev/null && echo "copied" || echo "FAILED"
+  fi
+done
 
 echo ""
 
-# ── Step 3: Write default plugin configs ─────────────────────
+# ── Step 3: Write required config + allowlist ────────────────
 
-echo "  [3/4] Writing plugin configs"
-echo "  ----------------------------"
+echo "  [3/4] Configuring plugins"
+echo "  -------------------------"
 
-OPENCLAW_CONFIG="${HOME}/.openclaw/openclaw.json"
+# Set required config for alpaca-trading
+printf "    %-20s" "alpaca-trading"
+openclaw config set plugins.entries.alpaca-trading.config.apiKeyEnv ALPACA_API_KEY >/dev/null 2>&1
+openclaw config set plugins.entries.alpaca-trading.config.apiSecretEnv ALPACA_API_SECRET >/dev/null 2>&1
+openclaw config set plugins.entries.alpaca-trading.config.env paper >/dev/null 2>&1
+echo "OK (env: paper)"
+
+# Set required config for plaid-connect
+printf "    %-20s" "plaid-connect"
+openclaw config set plugins.entries.plaid-connect.config.plaidClientIdEnv PLAID_CLIENT_ID >/dev/null 2>&1
+openclaw config set plugins.entries.plaid-connect.config.plaidSecretEnv PLAID_SECRET >/dev/null 2>&1
+openclaw config set plugins.entries.plaid-connect.config.plaidEnv sandbox >/dev/null 2>&1
+echo "OK (env: sandbox)"
+
+# Set config hints for market-intel
+printf "    %-20s" "market-intel"
+openclaw config set plugins.entries.market-intel.config.finnhubApiKeyEnv FINNHUB_API_KEY >/dev/null 2>&1
+openclaw config set plugins.entries.market-intel.config.fredApiKeyEnv FRED_API_KEY >/dev/null 2>&1
+openclaw config set plugins.entries.market-intel.config.blsApiKeyEnv BLS_API_KEY >/dev/null 2>&1
+openclaw config set plugins.entries.market-intel.config.alphaVantageApiKeyEnv ALPHA_VANTAGE_API_KEY >/dev/null 2>&1
+echo "OK (partial keys accepted)"
+
+# Set config hints for social-sentiment
+printf "    %-20s" "social-sentiment"
+openclaw config set plugins.entries.social-sentiment.config.xApiBearerTokenEnv X_API_BEARER_TOKEN >/dev/null 2>&1
+openclaw config set plugins.entries.social-sentiment.config.quiverApiKeyEnv QUIVER_API_KEY >/dev/null 2>&1
+echo "OK (partial keys accepted)"
+
+# Remaining extensions have no required config
+for ext in finance-core ibkr-portfolio tax-engine; do
+  printf "    %-20s" "$ext"
+  echo "OK (no required config)"
+done
+
+echo ""
+
+# Add all to allowlist (edit file directly since CLI lacks array-append)
+echo "  Adding to plugins.allow..."
 
 if [[ -f "$OPENCLAW_CONFIG" ]]; then
-  python3 - "$OPENCLAW_CONFIG" << 'PYEOF'
-import json, sys, os
-
-config_path = sys.argv[1]
-
-# Read existing config (plain JSON — openclaw.json is JSON5 but
-# python json.load handles the subset that openclaw config set writes)
-try:
-    with open(config_path, 'r') as f:
-        content = f.read().strip()
-        if not content:
-            config = {}
-        else:
-            config = json.loads(content)
-except (json.JSONDecodeError, FileNotFoundError):
-    print("    WARN  could not parse openclaw.json, skipping config injection")
-    print("    Run: openclaw config set plugins.entries.<id>.config.<key> <value>")
-    sys.exit(0)
-
-plugins = config.setdefault("plugins", {})
-entries = plugins.setdefault("entries", {})
-changed = False
-
-# Default configs for plugins with required fields
-defaults = {
-    "alpaca-trading": {
-        "enabled": True,
-        "config": {
-            "apiKeyEnv": "ALPACA_API_KEY",
-            "apiSecretEnv": "ALPACA_API_SECRET",
-            "env": "paper"
-        }
-    },
-    "plaid-connect": {
-        "enabled": True,
-        "config": {
-            "plaidClientIdEnv": "PLAID_CLIENT_ID",
-            "plaidSecretEnv": "PLAID_SECRET",
-            "plaidEnv": "sandbox"
-        }
-    },
-    "ibkr-portfolio": {"enabled": True},
-    "finance-core": {"enabled": True},
-    "tax-engine": {"enabled": True}
-}
-
-for plugin_id, default_entry in defaults.items():
-    entry = entries.setdefault(plugin_id, {})
-    merged = False
-
-    # Ensure enabled
-    if not entry.get("enabled"):
-        entry["enabled"] = True
-        merged = True
-
-    # Merge config defaults (don't overwrite existing values)
-    if "config" in default_entry:
-        entry_config = entry.setdefault("config", {})
-        for key, value in default_entry["config"].items():
-            if key not in entry_config:
-                entry_config[key] = value
-                merged = True
-
-    if merged:
-        changed = True
-        print(f"    {plugin_id:20s} configured")
-    else:
-        print(f"    {plugin_id:20s} already configured")
-
-if changed:
-    with open(config_path, 'w') as f:
-        json.dump(config, f, indent=2)
-        f.write('\n')
-    print("")
-    print("    Config updated.")
-else:
-    print("")
-    print("    No changes needed.")
-PYEOF
-else
-  echo "    SKIP  openclaw.json not found at $OPENCLAW_CONFIG"
-  echo "    After installing OpenClaw, re-run this script or set configs manually:"
-  echo ""
-  echo "      openclaw config set plugins.entries.alpaca-trading.config.apiKeyEnv ALPACA_API_KEY"
-  echo "      openclaw config set plugins.entries.alpaca-trading.config.apiSecretEnv ALPACA_API_SECRET"
-  echo "      openclaw config set plugins.entries.alpaca-trading.config.env paper"
-  echo "      openclaw config set plugins.entries.plaid-connect.config.plaidClientIdEnv PLAID_CLIENT_ID"
-  echo "      openclaw config set plugins.entries.plaid-connect.config.plaidSecretEnv PLAID_SECRET"
-  echo "      openclaw config set plugins.entries.plaid-connect.config.plaidEnv sandbox"
+  # Use node to safely handle JSON5 allowlist patching
+  node -e "
+    const fs = require('fs');
+    const path = '$OPENCLAW_CONFIG';
+    let raw = fs.readFileSync(path, 'utf8');
+    const ids = ['finance-core','plaid-connect','alpaca-trading','ibkr-portfolio','tax-engine','market-intel','social-sentiment'];
+    for (const id of ids) {
+      // Only add if not already present
+      if (!raw.includes('\"' + id + '\"')) {
+        // Insert before the closing bracket of plugins.allow
+        // Find the allow array and append
+        raw = raw.replace(
+          /(\"allow\":\s*\[[\s\S]*?)(\"telegram\")/,
+          '\$1\$2,\n      \"' + id + '\"'
+        );
+      }
+    }
+    fs.writeFileSync(path, raw);
+  " 2>/dev/null && echo "    OK" || echo "    WARN: could not patch allowlist automatically"
+  echo "    If plugins show as 'disabled', add them to plugins.allow in openclaw.json"
 fi
 
 echo ""
@@ -342,7 +268,6 @@ echo "  ------------"
 
 errors=0
 
-# Check SKILL.md is reachable
 if [[ -f "$skill_target/SKILL.md" ]]; then
   echo "    SKILL.md             OK"
 else
@@ -350,30 +275,13 @@ else
   errors=$((errors + 1))
 fi
 
-# Check each plugin manifest is reachable
 for ext in "${EXTENSIONS[@]}"; do
-  if has_cmd openclaw; then
-    check_path="$ext"
-    printf "    %-20s " "$ext"
-    if openclaw plugins info "$ext" &>/dev/null 2>&1; then
-      echo "OK"
-    else
-      echo "NOT REGISTERED"
-      errors=$((errors + 1))
-    fi
+  printf "    %-20s " "$ext"
+  if openclaw plugins info "$ext" &>/dev/null 2>&1; then
+    echo "OK"
   else
-    if [[ "$MODE" == "link" ]]; then
-      check_path="$OPENCLAW_EXT_DIR/$ext/openclaw.plugin.json"
-    else
-      check_path="$OPENCLAW_EXT_DIR/$ext/openclaw.plugin.json"
-    fi
-    printf "    %-20s " "$ext"
-    if [[ -f "$check_path" ]]; then
-      echo "OK"
-    else
-      echo "NOT FOUND"
-      errors=$((errors + 1))
-    fi
+    echo "NOT REGISTERED"
+    errors=$((errors + 1))
   fi
 done
 
@@ -391,25 +299,33 @@ echo "  Onboard complete!"
 echo ""
 echo "  Next steps:"
 echo ""
-echo "  1. Set API credentials (env vars or openclaw config):"
+echo "  1. Set API credentials (env vars):"
 echo ""
 echo "     # Plaid (dashboard.plaid.com)"
 echo "     export PLAID_CLIENT_ID=\"...\""
 echo "     export PLAID_SECRET=\"...\""
-echo "     export PLAID_ENV=\"sandbox\""
 echo ""
 echo "     # Alpaca (app.alpaca.markets)"
 echo "     export ALPACA_API_KEY=\"...\""
 echo "     export ALPACA_API_SECRET=\"...\""
-echo "     export ALPACA_ENV=\"paper\""
 echo ""
 echo "     # IBKR (start Client Portal Gateway first)"
 echo "     export IBKR_BASE_URL=\"https://localhost:5000/v1/api\""
 echo ""
+echo "     # Market Intelligence (all optional, partial OK)"
+echo "     export FINNHUB_API_KEY=\"...\"      # finnhub.io"
+echo "     export FRED_API_KEY=\"...\"          # fred.stlouisfed.org"
+echo "     export BLS_API_KEY=\"...\"           # bls.gov/developers"
+echo "     export ALPHA_VANTAGE_API_KEY=\"...\" # alphavantage.co"
+echo ""
+echo "     # Social Sentiment (all optional, partial OK)"
+echo "     export X_API_BEARER_TOKEN=\"...\"    # developer.x.com"
+echo "     export QUIVER_API_KEY=\"...\"        # quiverquant.com"
+echo ""
 echo "  2. Restart the gateway:"
 echo "     openclaw gateway restart"
 echo ""
-echo "  3. Verify tools are loaded:"
+echo "  3. Verify:"
 echo "     openclaw plugins list"
 echo ""
 echo "  4. Try it out:"

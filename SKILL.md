@@ -1,22 +1,23 @@
 ---
 name: personal-finance-skill
 description: >
-  Personal finance management skill providing 46 tools across 5 extensions
+  Personal finance management skill providing 75 tools across 7 extensions
   for bank account aggregation (Plaid), brokerage trading (Alpaca), portfolio
-  monitoring (IBKR), tax optimization, and financial analysis. Supports
-  scheduled scans, anomaly detection, net worth tracking, tax-loss harvesting,
-  and approval-gated execution of financial actions.
+  monitoring (IBKR), tax optimization, market intelligence (Finnhub, SEC EDGAR,
+  FRED, BLS, Alpha Vantage), social sentiment (StockTwits, X/Twitter, Quiver),
+  and financial analysis. Supports scheduled scans, anomaly detection, net worth
+  tracking, tax-loss harvesting, and approval-gated execution of financial actions.
 license: MIT
 metadata:
   author: contributors
-  version: "1.0.0"
-  tools: "46"
-  extensions: "finance-core, plaid-connect, alpaca-trading, ibkr-portfolio, tax-engine"
+  version: "2.0.0"
+  tools: "75"
+  extensions: "finance-core, plaid-connect, alpaca-trading, ibkr-portfolio, tax-engine, market-intel, social-sentiment"
 ---
 
 # Personal Finance Skill
 
-A comprehensive personal finance management skill with 46 tools across 5 extensions for banking, investing, tax, and financial analysis workflows.
+A comprehensive personal finance management skill with 75 tools across 7 extensions for banking, investing, tax, market intelligence, social sentiment, and financial analysis workflows.
 
 ## When to Use
 
@@ -27,7 +28,9 @@ Activate this skill when a user asks for:
 - **Portfolio monitoring** — positions, allocation, performance, drift detection
 - **Trading** — placing/canceling orders, market data, asset lookup (Alpaca)
 - **Tax optimization** — estimated liability, TLH candidates, wash sale checks, quarterly payments
-- **Tax document processing** — parsing W-2, 1099-B, 1099-DIV, 1099-INT, K-1
+- **Tax document processing** — parsing W-2, 1099-B/DIV/INT, K-1, Form 1040, Schedules A-E/SE, Form 8949, Form 6251 (AMT), state returns
+- **Market intelligence** — company news, SEC filings, analyst recommendations, economic data (FRED, BLS), news sentiment
+- **Social sentiment** — StockTwits sentiment, X/Twitter cashtag analysis, trending symbols, congressional trading
 - **Recurring expense tracking** — subscriptions, bills, income streams
 - **Anomaly detection** — unusual transactions, balance drops, duplicate charges
 - **Financial briefings** — weekly/monthly summaries with action items
@@ -35,11 +38,14 @@ Activate this skill when a user asks for:
 
 ## Architecture Overview
 
-Five extensions organized in three layers:
+Seven extensions organized in three layers:
 
 ```
 Intelligence Layer
-  tax-engine (10 tools) — parsing, liability, TLH, wash sales, lots
+  tax-engine (23 tools) — parsing (15), liability, TLH, wash sales, lots,
+    Schedule D computation, state tax, AMT
+  market-intel (10 tools) — news, fundamentals, SEC filings, economic data
+  social-sentiment (6 tools) — StockTwits, X/Twitter, congressional trades
 
 Data Source Adapters
   plaid-connect (8)   alpaca-trading (10)   ibkr-portfolio (9)
@@ -117,7 +123,7 @@ Foundation Layer
 
 > Full schemas: [references/ext-ibkr-portfolio.md](references/ext-ibkr-portfolio.md)
 
-### tax-engine — 10 tools
+### tax-engine — 23 tools
 
 | Tool | Description | Risk |
 |------|-------------|------|
@@ -126,13 +132,56 @@ Foundation Layer
 | `tax_parse_1099int` | Parse 1099-INT (interest, bond premiums) | READ |
 | `tax_parse_w2` | Parse W-2 (wages, withholding, SS/Medicare) | READ |
 | `tax_parse_k1` | Parse Schedule K-1 (partnership pass-through) | READ |
+| `tax_parse_1040` | Parse Form 1040 (main federal return) | READ |
+| `tax_parse_schedule_a` | Parse Schedule A (itemized deductions, SALT cap) | READ |
+| `tax_parse_schedule_b` | Parse Schedule B (interest/dividend payors) | READ |
+| `tax_parse_schedule_c` | Parse Schedule C (self-employment income) | READ |
+| `tax_parse_schedule_d` | Parse Schedule D (capital gains netting) | READ |
+| `tax_parse_schedule_e` | Parse Schedule E (rental/royalty/partnership) | READ |
+| `tax_parse_schedule_se` | Parse Schedule SE (self-employment tax) | READ |
+| `tax_parse_form_8949` | Parse Form 8949 (sales and dispositions) | READ |
+| `tax_parse_state_return` | Parse state return (CA 540, NY IT-201, etc.) | READ |
+| `tax_parse_form_6251` | Parse Form 6251 (AMT) | READ |
 | `tax_estimate_liability` | Calculate federal/state tax with brackets | READ |
 | `tax_find_tlh_candidates` | Identify tax-loss harvesting opportunities | READ |
 | `tax_check_wash_sales` | Validate wash sale rule compliance (61-day window) | READ |
 | `tax_lot_selection` | Compare FIFO/LIFO/specific ID for a proposed sale | READ |
 | `tax_quarterly_estimate` | Quarterly estimated payments with safe harbor | READ |
+| `tax_compute_schedule_d` | Compute Schedule D netting with loss carryover | READ |
+| `tax_compute_state_tax` | Compute state tax for CA/NY/NJ/IL/PA/MA/TX/FL | READ |
+| `tax_compute_amt` | Compute Alternative Minimum Tax (Form 6251) | READ |
 
 > Full schemas: [references/ext-tax-engine.md](references/ext-tax-engine.md)
+
+### market-intel — 10 tools
+
+| Tool | Description | Risk |
+|------|-------------|------|
+| `intel_company_news` | Get recent news articles for a company (Finnhub) | READ |
+| `intel_market_news` | Get general market news by category (Finnhub) | READ |
+| `intel_stock_fundamentals` | Get reported financial statements (Finnhub) | READ |
+| `intel_analyst_recommendations` | Get analyst buy/hold/sell consensus (Finnhub) | READ |
+| `intel_sec_filings` | List SEC filings for a company by ticker (EDGAR) | READ |
+| `intel_sec_search` | Full-text search across SEC filings (EDGAR) | READ |
+| `intel_fred_series` | Fetch economic time series (GDP, CPI, rates) (FRED) | READ |
+| `intel_fred_search` | Search for FRED series by keyword | READ |
+| `intel_bls_data` | Fetch labor/price statistics time series (BLS) | READ |
+| `intel_news_sentiment` | Get news with AI-scored sentiment (Alpha Vantage) | READ |
+
+> Full schemas: [references/ext-market-intel.md](references/ext-market-intel.md)
+
+### social-sentiment — 6 tools
+
+| Tool | Description | Risk |
+|------|-------------|------|
+| `social_stocktwits_sentiment` | Get bull/bear sentiment for a stock (StockTwits) | READ |
+| `social_stocktwits_trending` | Get currently trending symbols (StockTwits) | READ |
+| `social_x_search` | Search recent tweets by keyword (X/Twitter) | READ |
+| `social_x_user_timeline` | Get recent tweets from a user (X/Twitter) | READ |
+| `social_x_cashtag` | Search cashtag with keyword sentiment scoring (X) | READ |
+| `social_quiver_congress` | Get congressional stock trading disclosures (Quiver) | READ |
+
+> Full schemas: [references/ext-social-sentiment.md](references/ext-social-sentiment.md)
 
 ## Key Workflows
 
@@ -189,6 +238,51 @@ alpaca_list_positions + ibkr_get_positions
   → finance_generate_brief(period: "weekly")
 ```
 
+### 6. Company Research — Market Intelligence
+
+```
+intel_company_news(symbol: "AAPL", limit: 10)
+  → intel_analyst_recommendations(symbol: "AAPL")
+  → intel_stock_fundamentals(symbol: "AAPL", freq: "quarterly")
+  → intel_sec_filings(symbol: "AAPL", formType: "10-K")
+  → intel_news_sentiment(tickers: "AAPL")
+  → social_stocktwits_sentiment(symbol: "AAPL")
+  → social_x_cashtag(symbol: "AAPL")
+```
+
+### 7. Economic Overview
+
+```
+intel_fred_series(seriesId: "GDP")
+  → intel_fred_series(seriesId: "CPIAUCSL")
+  → intel_fred_series(seriesId: "UNRATE")
+  → intel_bls_data(seriesIds: ["CES0000000001"])
+  → intel_fred_series(seriesId: "DFF")
+```
+
+### 8. Full Tax Return Processing
+
+```
+tax_parse_1040(rawData) → tax_parse_schedule_a(rawData)
+  → tax_parse_schedule_b(rawData) → tax_parse_schedule_c(rawData)
+  → tax_parse_schedule_d(rawData) → tax_parse_schedule_e(rawData)
+  → tax_parse_form_8949(rawData) → tax_parse_schedule_se(rawData)
+  → tax_compute_schedule_d(gains, losses, carryovers)
+  → tax_compute_state_tax(stateCode, taxableIncome, filingStatus)
+  → tax_compute_amt(taxableIncome, adjustments, regularTax)
+  → tax_parse_state_return(rawData)
+```
+
+### 9. Congressional Trading Signals
+
+```
+social_quiver_congress(daysBack: 30)
+  → Filter for large purchases
+  → intel_company_news(symbol: <top_ticker>)
+  → alpaca_market_data(symbols: <top_ticker>)
+  → social_stocktwits_sentiment(symbol: <top_ticker>)
+```
+
 ## Configuration
 
 ### Environment Variables
@@ -202,6 +296,12 @@ alpaca_list_positions + ibkr_get_positions
 | `ALPACA_API_SECRET` | alpaca-trading | Alpaca API secret |
 | `ALPACA_ENV` | alpaca-trading | paper / live |
 | `IBKR_BASE_URL` | ibkr-portfolio | Client Portal Gateway URL |
+| `FINNHUB_API_KEY` | market-intel | Finnhub API key (finnhub.io) |
+| `FRED_API_KEY` | market-intel | FRED API key (fred.stlouisfed.org) |
+| `BLS_API_KEY` | market-intel | BLS registration key (v2) |
+| `ALPHA_VANTAGE_API_KEY` | market-intel | Alpha Vantage API key |
+| `X_API_BEARER_TOKEN` | social-sentiment | X/Twitter OAuth 2.0 Bearer Token |
+| `QUIVER_API_KEY` | social-sentiment | Quiver Quantitative API key |
 
 ### Extension Config
 
@@ -212,6 +312,8 @@ Each extension has an `openclaw.plugin.json` with a `configSchema`. Key settings
 - **alpaca-trading**: `env` (paper/live), `maxOrderQty`, `maxOrderNotional`
 - **ibkr-portfolio**: `baseUrl`, `defaultAccountId`
 - **tax-engine**: `defaultFilingStatus`, `defaultState`, `defaultTaxYear`
+- **market-intel**: `finnhubApiKeyEnv`, `fredApiKeyEnv`, `blsApiKeyEnv`, `alphaVantageApiKeyEnv`, `secEdgarUserAgent`
+- **social-sentiment**: `xApiBearerTokenEnv`, `quiverApiKeyEnv`
 
 ## Cron Examples
 
@@ -278,7 +380,9 @@ Detailed documentation is available in the `references/` directory:
 | [references/ext-plaid-connect.md](references/ext-plaid-connect.md) | 8 tools, Plaid Link flow, webhook handling |
 | [references/ext-alpaca-trading.md](references/ext-alpaca-trading.md) | 10 tools, order lifecycle, safety limits |
 | [references/ext-ibkr-portfolio.md](references/ext-ibkr-portfolio.md) | 9 tools, session management, market data fields |
-| [references/ext-tax-engine.md](references/ext-tax-engine.md) | 10 tools, 5 parsers + 5 calculators, form field mappings |
+| [references/ext-tax-engine.md](references/ext-tax-engine.md) | 23 tools, 15 parsers + 8 calculators/strategy, form field mappings |
+| [references/ext-market-intel.md](references/ext-market-intel.md) | 10 tools, Finnhub/SEC EDGAR/FRED/BLS/Alpha Vantage |
+| [references/ext-social-sentiment.md](references/ext-social-sentiment.md) | 6 tools, StockTwits/X/Twitter/Quiver Quantitative |
 | [references/data-models-and-schemas.md](references/data-models-and-schemas.md) | Canonical types, enums, entity schemas |
 | [references/risk-and-policy-guardrails.md](references/risk-and-policy-guardrails.md) | Policy engine, approval tiers, hard rules |
 | [references/api-plaid.md](references/api-plaid.md) | Full Plaid API reference |

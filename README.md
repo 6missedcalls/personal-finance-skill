@@ -225,29 +225,29 @@ alpaca_list_positions + ibkr_get_positions
 - **TypeScript 5+**
 - API credentials for at least one provider (see below)
 
-### 1. Clone & Install
+### 1. Clone & Onboard
+
+The onboard script builds all extensions, registers them as OpenClaw plugins, and installs the skill:
 
 ```bash
-git clone https://github.com/<owner>/personal-finance-skill.git
+git clone https://github.com/6missedcalls/personal-finance-skill.git
 cd personal-finance-skill
 
-# Install all extensions
-for ext in extensions/*/; do
-  (cd "$ext" && npm install)
-done
+# Build, symlink plugins, and install skill in one command
+./scripts/onboard.sh
 ```
 
-### 2. Build
+The script will:
+1. Install deps and build all 5 extensions
+2. Register each as an OpenClaw plugin (dev-linked via `openclaw plugins install -l`)
+3. Symlink the skill into `~/.openclaw/skills/`
+4. Verify everything is reachable
 
-```bash
-for ext in extensions/*/; do
-  (cd "$ext" && npm run build)
-done
-```
+> **Options**: `--copy` to copy instead of symlink, `--uninstall` to remove everything.
 
-### 3. Configure API Credentials
+### 2. Configure API Credentials
 
-Create a `.env` file (gitignored) or export directly:
+Set credentials for the providers you plan to use (you don't need all of them):
 
 ```bash
 # Plaid — https://dashboard.plaid.com
@@ -264,7 +264,12 @@ export ALPACA_ENV="paper"               # paper | live
 export IBKR_BASE_URL="https://localhost:5000/v1/api"
 ```
 
-> You only need credentials for the providers you plan to use. Each extension works independently.
+### 3. Restart & Verify
+
+```bash
+openclaw gateway restart
+openclaw plugins list        # should show all 5 extensions
+```
 
 ### 4. Run Tests
 
@@ -286,6 +291,8 @@ personal-finance-skill/
   SKILL.md                              # Agent Skills Protocol entry point
   README.md                             # This file
   LICENSE                               # MIT
+  scripts/
+    onboard.sh                          # Build + register + verify (one command)
   extensions/
     finance-core/                       # Foundation: models, storage, policy
     plaid-connect/                      # Adapter: Plaid banking API

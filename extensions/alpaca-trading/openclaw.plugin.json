@@ -9,16 +9,19 @@
     "properties": {
       "apiKeyEnv": {
         "type": "string",
-        "description": "Name of env var holding Alpaca API key"
+        "description": "Name of env var holding Alpaca API key",
+        "default": "ALPACA_API_KEY"
       },
       "apiSecretEnv": {
         "type": "string",
-        "description": "Name of env var holding Alpaca API secret"
+        "description": "Name of env var holding Alpaca API secret",
+        "default": "ALPACA_API_SECRET"
       },
       "env": {
         "type": "string",
         "enum": ["paper", "live"],
-        "description": "Trading environment (paper or live)"
+        "description": "Trading environment (paper or live)",
+        "default": "paper"
       },
       "maxOrderQty": {
         "type": "number",
